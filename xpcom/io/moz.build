@@ -141,6 +141,10 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":
         "CocoaFileUtils.mm",
     ]
 
+if CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
+    CXXFLAGS += CONFIG["MOZ_QT_CFLAGS"]
+    CFLAGS += CONFIG["MOZ_QT_CFLAGS"]
+
 include("/ipc/chromium/chromium-config.mozbuild")
 
 FINAL_LIBRARY = "xul"
