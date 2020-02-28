@@ -329,3 +329,11 @@ GeneratedFile(
 )
 
 REQUIRES_UNIFIED_BUILD = True
+
+if CONFIG['MOZ_ENABLE_QTNETWORK']:
+    LOCAL_INCLUDES += [
+        '/netwerk/system/qt',
+    ]
+
+if CONFIG['MOZ_ENABLE_QTNETWORK']:
+    CXXFLAGS += CONFIG['MOZ_QT_CFLAGS']

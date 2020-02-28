@@ -97,6 +97,7 @@ def old_configure_options(*options):
     "--with-branding",
     "--with-distribution-id",
     "--with-macbundlename-prefix",
+    "--with-qtdir",
     "--x-includes",
     "--x-libraries",
 )

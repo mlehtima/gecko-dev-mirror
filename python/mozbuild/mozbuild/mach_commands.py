@@ -2538,7 +2538,6 @@ def package_l10n(command_context, verbose=False, locales=[]):
 
     return 0
 
-
 def _prepend_debugger_args(args, debugger, debugger_args):
     """
     Given an array with program arguments, prepend arguments to run it under a

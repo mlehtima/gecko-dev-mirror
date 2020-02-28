@@ -96,6 +96,15 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
         "nsNativeAppSupportDefault.cpp",
         "UIKitDirProvider.mm",
     ]
+elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'qt':
+    EXPORTS += ['nsQAppInstance.h']
+    CXXFLAGS += CONFIG["MOZ_QT_CFLAGS"]
+    CFLAGS += CONFIG["MOZ_QT_CFLAGS"]
+    SOURCES += [
+        '!moc_nsNativeAppSupportQt.cpp',
+        'nsNativeAppSupportQt.cpp',
+        'nsQAppInstance.cpp',
+    ]
 elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
     UNIFIED_SOURCES += [
         "nsNativeAppSupportUnix.cpp",

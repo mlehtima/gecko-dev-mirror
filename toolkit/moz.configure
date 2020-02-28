@@ -412,6 +412,7 @@ def toolkit_choices(target):
             "cairo-gtk3-wayland",
             "cairo-gtk3-wayland-only",
             "cairo-gtk3-x11-wayland",
+            "cairo-qt",
         )
 
 
@@ -460,6 +461,10 @@ set_define(toolkit_define, True)
 @depends(toolkit)
 def toolkit_gtk(toolkit):
     return toolkit == "gtk"
+
+@depends(toolkit)
+def toolkit_qt(toolkit):
+    return toolkit == "qt"
 
 
 # Wayland support
@@ -529,7 +534,7 @@ set_define(gl_provider_define, True)
 # ==============================================================
 @depends(toolkit)
 def pdf_printing(toolkit):
-    if toolkit in ("windows", "gtk", "android"):
+    if toolkit in ('windows', 'gtk', 'android', 'qt'):
         return True
 
 
@@ -561,7 +566,8 @@ option(env="USE_FC_FREETYPE", help="Force-enable the use of fontconfig freetype"
 
 @depends("USE_FC_FREETYPE", toolkit)
 def fc_freetype(value, toolkit):
-    if value or (toolkit == "gtk" and value.origin == "default"):
+    if value or (toolkit in ('gtk', 'qt') and
+                 value.origin == 'default'):
         return True
 
 
@@ -2906,7 +2912,7 @@ with only_when(toolkit_gtk):
 
 # DBus
 # ==============================================================
-with only_when(toolkit_gtk):
+with only_when(toolkit_gtk | toolkit_qt):
     option("--disable-dbus", help="Disable dbus support")
 
     with only_when("--enable-dbus"):
@@ -2934,7 +2940,7 @@ set_define("NECKO_WIFI", True, when="--enable-necko-wifi")
 
 @depends(
     depends("--enable-necko-wifi", when=necko_wifi_when)(lambda x: x),
-    depends("--enable-dbus", when=toolkit_gtk)(lambda x: x),
+    depends("--enable-dbus", when=toolkit_gtk | toolkit_qt)(lambda x: x),
     when=depends(target)(lambda t: t.os == "GNU" and t.kernel == "Linux"),
 )
 def necko_wifi_dbus(necko_wifi, dbus):
@@ -2972,7 +2978,7 @@ set_define("MOZ_LAYERS_HAVE_LOG", True, when="--enable-dump-painting")
 
 # libproxy support
 # ==============================================================
-with only_when(toolkit_gtk):
+with only_when(toolkit_gtk | toolkit_qt):
     system_lib_option("--enable-libproxy", help="Enable libproxy support")
 
     with only_when("--enable-libproxy"):
@@ -2981,6 +2987,14 @@ with only_when(toolkit_gtk):
         set_config("MOZ_ENABLE_LIBPROXY", True)
         set_define("MOZ_ENABLE_LIBPROXY", True)
 
+
+# Qt
+# ==============================================================
+with only_when(toolkit_qt):
+    pkg_check_modules("GLIB", "glib-2.0 >= 2.42 gobject-2.0")
+
+    set_define("GLIB_VERSION_MIN_REQUIRED", "GLIB_VERSION_2_42")
+    set_define("GLIB_VERSION_MAX_ALLOWED", "GLIB_VERSION_2_42")
 
 # Enable runtime logging
 # ==============================================================

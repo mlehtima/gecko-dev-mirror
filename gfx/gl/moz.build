@@ -14,6 +14,8 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
     gl_provider = "EAGL"
 elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
     gl_provider = "Linux"
+elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'qt':
+    gl_provider = 'Linux'
 elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "android":
     gl_provider = "EGL"
 
@@ -150,6 +152,10 @@ if CONFIG["MOZ_D3DCOMPILER_VISTA_DLL"]:
 if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
     CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
     CFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
+
+if CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
+    CXXFLAGS += CONFIG["MOZ_QT_CFLAGS"]
+    CFLAGS += CONFIG["MOZ_QT_CFLAGS"]
 
 CXXFLAGS += ["-Werror=switch"]
 

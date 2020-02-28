@@ -194,7 +194,9 @@ if CONFIG["MOZ_JPROF"]:
         "jprof",
     ]
 
-if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk" or CONFIG["MOZ_TREE_FREETYPE"]:
+if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'gtk' or CONFIG['MOZ_WIDGET_TOOLKIT'] == 'qt' or \
+         CONFIG['MOZ_TREE_FREETYPE']:
+
     USE_LIBS += [
         "freetype",
     ]
@@ -327,6 +329,13 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk" and CONFIG["COMPILE_ENVIRONMENT"]:
     OS_LIBS += CONFIG["MOZ_X11_LIBS"]
     OS_LIBS += CONFIG["MOZ_PANGO_LIBS"]
 
+if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'qt':
+    OS_LIBS += CONFIG['XLDFLAGS']
+    OS_LIBS += CONFIG['XLIBS']
+    OS_LIBS += CONFIG['XT_LIBS']
+    OS_LIBS += CONFIG['MOZ_QT_LIBS']
+    OS_LIBS += CONFIG['MOZ_PANGO_LIBS']
+
 if CONFIG["MOZ_ENABLE_LIBPROXY"]:
     OS_LIBS += CONFIG["MOZ_LIBPROXY_LIBS"]
 
@@ -385,6 +394,9 @@ if CONFIG["OS_ARCH"] == "WINNT":
         OS_LIBS += [
             "oleacc",
         ]
+
+if CONFIG['MOZ_ENABLE_QT']:
+    OS_LIBS += CONFIG['XEXT_LIBS']
 
     # Prevent winapi-rs from statically linking
     LIBRARY_DEFINES["WINAPI_NO_BUNDLED_LIBRARIES"] = True

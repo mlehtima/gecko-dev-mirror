@@ -17,7 +17,7 @@
 #include "mozilla/net/WebSocketChannelParent.h"
 #include "mozilla/net/WebSocketEventListenerParent.h"
 #include "mozilla/net/DataChannelParent.h"
-#ifdef MOZ_WIDGET_GTK
+#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
 #  include "mozilla/net/GIOChannelParent.h"
 #endif
 #include "mozilla/net/DocumentChannelParent.h"
@@ -360,7 +360,7 @@ mozilla::ipc::IPCResult NeckoParent::RecvPDataChannelConstructor(
   return IPC_OK();
 }
 
-#ifdef MOZ_WIDGET_GTK
+#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
 static already_AddRefed<nsIPrincipal> GetRequestingPrincipal(
     const GIOChannelCreationArgs& aArgs) {
   if (aArgs.type() != GIOChannelCreationArgs::TGIOChannelOpenArgs) {

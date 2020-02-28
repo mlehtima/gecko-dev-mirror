@@ -99,7 +99,7 @@ if CONFIG["MOZ_WAYLAND"]:
         "RenderDMABUFTextureHost.cpp",
     ]
 
-if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk"):
+if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('android', 'gtk', 'qt'):
     CXXFLAGS += CONFIG["CAIRO_FT_CFLAGS"]
 
 if CONFIG["COMPILE_ENVIRONMENT"]:

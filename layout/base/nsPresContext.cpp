@@ -1937,6 +1937,11 @@ void nsPresContext::UserFontSetUpdated(gfxUserFontEntry* aUpdatedFont) {
     return;
   }
 
+  bool usePlatformFontList = true;
+#if defined(MOZ_WIDGET_QT)
+  usePlatformFontList = false;
+#endif
+
   // Note: this method is called without a font when rules in the userfont set
   // are updated.
   //
@@ -1946,7 +1951,7 @@ void nsPresContext::UserFontSetUpdated(gfxUserFontEntry* aUpdatedFont) {
   //
   // TODO(emilio): We could be more granular if we knew which families have
   // potentially changed.
-  if (!aUpdatedFont) {
+  if (!usePlatformFontList || !aUpdatedFont) {
     auto hint = UsesFontMetricDependentFontUnits()
                     ? RestyleHint::RecascadeSubtree()
                     : RestyleHint{0};

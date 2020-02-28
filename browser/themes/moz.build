@@ -33,7 +33,7 @@ if toolkit == "windows":
 
 if toolkit == "cocoa":
     DIRS += ["osx"]
-elif toolkit == "gtk":
+elif toolkit in ('gtk', 'qt'):
     DIRS += ["linux"]
 else:
     DIRS += ["windows"]

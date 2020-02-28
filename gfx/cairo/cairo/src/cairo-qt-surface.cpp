@@ -62,7 +62,7 @@
 #include <QtGui/QPixmap>
 #include <QtGui/QBrush>
 #include <QtGui/QPen>
-#include <QWidget>
+#include <QtWidgets/QWidget>
 #include <QtCore/QVarLengthArray>
 
 #if ((QT_VERSION >= QT_VERSION_CHECK(4, 7, 0)) || defined(QT_GLYPHS_API_BACKPORT)) && 0
@@ -787,7 +787,7 @@ _cairo_qt_surface_set_clip_region (cairo_qt_surface_t *qs,
 	    cairo_region_get_rectangle (clip_region, i, &rect);
 
 	    QRect r(rect.x, rect.y, rect.width, rect.height);
-	    qr = qr.unite(r);
+	    qr = qr.united(r);
 	}
 
 	qs->p->setClipRegion (qr, Qt::IntersectClip);
