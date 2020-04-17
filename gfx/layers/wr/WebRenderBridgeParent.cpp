@@ -2824,5 +2824,10 @@ WebRenderBridgeParentRef::~WebRenderBridgeParentRef() {
   MOZ_ASSERT(!mWebRenderBridge);
 }
 
+void mozilla::layers::WebRenderBridgeParent::CompositeToDefaultTarget(VsyncId aId,
+    wr::RenderReasons aReasons) {
+  CompositeToTarget(aId, aReasons, nullptr, nullptr);
+}
+
 }  // namespace layers
 }  // namespace mozilla

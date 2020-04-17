@@ -25,6 +25,8 @@ class CompositorVsyncSchedulerOwner {
   virtual void CompositeToTarget(VsyncId aId, wr::RenderReasons aReasons,
                                  gfx::DrawTarget* aTarget,
                                  const gfx::IntRect* aRect = nullptr) = 0;
+  virtual void CompositeToDefaultTarget(VsyncId aId,
+      wr::RenderReasons aReasons) = 0;
   virtual TimeDuration GetVsyncInterval() const = 0;
 };
 
