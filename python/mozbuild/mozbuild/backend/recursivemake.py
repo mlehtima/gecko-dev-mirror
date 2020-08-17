@@ -363,6 +363,7 @@ class RecursiveMakeBackend(MakeBackend):
         # used for a "magic" rm -rf.
         self._install_manifests["dist_public"]
         self._install_manifests["dist_private"]
+        self._install_manifests["dist_sdk"]
 
         self._traversal = RecursiveMakeTraversal()
         self._compile_graph = OrderedDefaultDict(set)
@@ -1342,6 +1343,8 @@ class RecursiveMakeBackend(MakeBackend):
         backend_file.write("SHARED_LIBRARY := %s\n" % libdef.lib_name)
         if libdef.soname:
             backend_file.write("DSO_SONAME := %s\n" % libdef.soname)
+        if libdef.is_sdk:
+            backend_file.write("SDK_LIBRARY := %s\n" % libdef.import_name)
         if libdef.symbols_file:
             if libdef.symbols_link_arg:
                 backend_file.write("EXTRA_DSO_LDOPTS += %s\n" % libdef.symbols_link_arg)
@@ -1358,6 +1361,8 @@ class RecursiveMakeBackend(MakeBackend):
         backend_file.write_once("LIBRARY_NAME := %s\n" % libdef.basename)
         backend_file.write("FORCE_STATIC_LIB := 1\n")
         backend_file.write("REAL_LIBRARY := %s\n" % libdef.lib_name)
+        if libdef.is_sdk:
+            backend_file.write("SDK_LIBRARY := %s\n" % libdef.import_name)
         if libdef.no_expand_lib:
             backend_file.write("NO_EXPAND_LIBS := 1\n")
 
@@ -1495,7 +1500,7 @@ class RecursiveMakeBackend(MakeBackend):
     def _process_final_target_files(self, obj, files, backend_file):
         target = obj.install_target
         path = mozpath.basedir(
-            target, ("dist/bin", "dist/xpi-stage", "_tests", "dist/include")
+            target, ("dist/bin", "dist/xpi-stage", "_tests", "dist/include", "dist/sdk")
         )
         if not path:
             raise Exception("Cannot install to " + target)

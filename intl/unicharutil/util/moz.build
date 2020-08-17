@@ -34,6 +34,8 @@ GeneratedFile(
 
 GeneratedFile("IsCombiningDiacritic.h", script="is_combining_diacritic.py", force=True)
 
+SDK_LIBRARY = True
+
 FINAL_LIBRARY = "xul"
 
 REQUIRES_UNIFIED_BUILD = True
