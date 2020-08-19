@@ -30,6 +30,9 @@ using struct mozilla::dom::LoadingSessionHistoryInfo
 using mozilla::net::ClassOfService from "mozilla/net/ClassOfService.h";
 
 
+using struct mozilla::null_t
+  from "ipc/IPCMessageUtils.h";
+
 using hal::ScreenOrientation from "mozilla/HalIPCUtils.h";
 using LayoutDeviceIntRect from "Units.h";
 using DesktopIntRect from "Units.h";

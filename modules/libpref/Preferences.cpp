@@ -94,6 +94,8 @@
 #  include "mozilla/BackgroundTasks.h"
 #endif
 
+#include "mozilla/embedlite/EmbedLiteAppProcessParent.h"
+
 #ifdef DEBUG
 #  include <map>
 #endif
@@ -3624,6 +3626,11 @@ Preferences::~Preferences() {
   gSharedMap = nullptr;
 
   PrefNameArena().Clear();
+}
+
+static mozilla::embedlite::EmbedLiteAppProcessParent* GetEmbedLiteParent()
+{
+  return mozilla::embedlite::EmbedLiteAppProcessParent::GetInstance();
 }
 
 NS_IMPL_ISUPPORTS(Preferences, nsIPrefService, nsIObserver, nsIPrefBranch,
