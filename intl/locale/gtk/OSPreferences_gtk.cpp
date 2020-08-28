@@ -6,6 +6,18 @@
 
 #include <locale.h>
 #include "mozilla/intl/Locale.h"
+
+#if MOZ_ENABLE_DCONF
+/* FIXME: there just has to be better way to deal with the
+ *        build system defaulting to every function - including
+ *        ones from external libraries like libdconf - having
+ *        visibility=hidden type ...
+ */
+# pragma GCC visibility push(default)
+# include <dconf.h>
+# pragma GCC visibility pop
+#endif
+
 #include "OSPreferences.h"
 
 #include "nsServiceManagerUtils.h"
@@ -42,6 +54,29 @@ bool OSPreferences::ReadRegionalPrefsLocales(nsTArray<nsCString>& aLocaleList) {
   return false;
 }
 
+#if MOZ_ENABLE_DCONF
+static int HourCycleSailfish() {
+  int returnValue = 0;
+  DConfClient *dconfClient;
+  if ((dconfClient = dconf_client_new())) {
+    static const char dconfKey[] = "/sailfish/i18n/lc_timeformat24h";
+    GVariant *valueVariant;
+    if ((valueVariant = dconf_client_read(dconfClient, dconfKey))) {
+      const gchar *stringValue;
+      if ((stringValue = g_variant_get_string(valueVariant, nullptr))) {
+        if (!strncmp(stringValue, "24", 2))
+          returnValue = 24;
+        else if (!strncmp(stringValue, "12", 2))
+          returnValue = 12;
+      }
+      g_variant_unref(valueVariant);
+    }
+    g_object_unref(dconfClient);
+  }
+  return returnValue;
+}
+#endif
+
 /*
  * This looks up into gtk settings for hourCycle format.
  *
@@ -53,6 +88,11 @@ bool OSPreferences::ReadRegionalPrefsLocales(nsTArray<nsCString>& aLocaleList) {
  */
 static int HourCycle() {
   int rval = 0;
+
+#if MOZ_ENABLE_DCONF
+  if ((rval = HourCycleSailfish()))
+    return rval;
+#endif
 
   // Ubuntu 16.04 and lower report "Unity". Ubuntu 16.04 is supported until
   // April 2021. This code can be removed once it hits EOL.
