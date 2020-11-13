@@ -307,18 +307,8 @@ nsresult nsProfileLock::LockWithSymlink(nsIFile* aLockFile,
   struct in_addr inaddr;
   inaddr.s_addr = htonl(INADDR_LOOPBACK);
 
-  char hostname[256];
-  PRStatus status = PR_GetSystemInfo(PR_SI_HOSTNAME, hostname, sizeof hostname);
-  if (status == PR_SUCCESS) {
-    char netdbbuf[PR_NETDB_BUF_SIZE];
-    PRHostEnt hostent;
-    status = PR_GetHostByName(hostname, netdbbuf, sizeof netdbbuf, &hostent);
-    if (status == PR_SUCCESS) memcpy(&inaddr, hostent.h_addr, sizeof inaddr);
-  }
-
   mozilla::SmprintfPointer signature =
-      mozilla::Smprintf("%s:%s%lu", inet_ntoa(inaddr),
-                        aHaveFcntlLock ? "+" : "", (unsigned long)getpid());
+      mozilla::Smprintf("127.0.0.1:%s%lu", aHaveFcntlLock ? "+" : "", (unsigned long)getpid());
   const char* fileName = lockFilePath.get();
   int symlink_rv, symlink_errno = 0, tries = 0;
 
