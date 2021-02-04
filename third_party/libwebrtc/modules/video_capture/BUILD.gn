@@ -60,12 +60,21 @@ if (!build_with_chromium) {
       "../../system_wrappers",
     ]
 
-    if (is_linux || is_bsd || is_chromeos) {
+    if ((is_linux || is_bsd || is_chromeos) && !is_sfos) {
       sources = [
         "linux/device_info_linux.cc",
         "linux/device_info_linux.h",
         "linux/video_capture_linux.cc",
         "linux/video_capture_linux.h",
+      ]
+      deps += [ "../../media:rtc_media_base" ]
+    }
+    if (is_sfos) {
+      sources = [
+        "sfos/device_info_sfos.cc",
+        "sfos/device_info_sfos.h",
+        "sfos/video_capture_sfos.cc",
+        "sfos/video_capture_sfos.h",
       ]
       deps += [ "../../media:rtc_media_base" ]
     }
@@ -114,7 +123,7 @@ if (!build_with_chromium) {
           "-lm",
         ]
       }
-      if (is_linux || is_chromeos) {
+      if ((is_linux || is_chromeos) && !is_sfos) {
         ldflags += [
           "-lrt",
           "-lXext",

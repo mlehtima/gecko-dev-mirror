@@ -124,7 +124,7 @@ class RTC_EXPORT I420BufferInterface : public PlanarYuv8Buffer {
   int ChromaWidth() const final;
   int ChromaHeight() const final;
 
-  rtc::scoped_refptr<I420BufferInterface> ToI420() final;
+  rtc::scoped_refptr<I420BufferInterface> ToI420();
   const I420BufferInterface* GetI420() const final;
 
  protected:

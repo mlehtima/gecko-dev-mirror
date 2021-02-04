@@ -69,6 +69,8 @@ class VideoCaptureImpl : public VideoCaptureModule {
                         const VideoCaptureCapability& frameInfo,
                         int64_t captureTime = 0);
 
+  int32_t IncomingVideoBuffer(const rtc::scoped_refptr<VideoFrameBuffer>& buffer, uint64_t captureTime);
+
   // Platform dependent
   int32_t StartCapture(const VideoCaptureCapability& capability) override;
   int32_t StopCapture() override;
