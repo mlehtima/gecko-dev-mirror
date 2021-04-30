@@ -7,6 +7,7 @@
 #define GMPSharedMemManager_h_
 
 #include "mozilla/ipc/Shmem.h"
+#include "mozilla/Mutex.h"
 #include "nsTArray.h"
 
 namespace mozilla::gmp {
@@ -26,7 +27,7 @@ class GMPSharedMem {
   // returned to the parent pool (which is not included).  If more than
   // this are needed, we presume the client has either crashed or hung
   // (perhaps temporarily).
-  static const uint32_t kGMPBufLimit = 20;
+  static const int32_t kGMPBufLimit = 32;
 
   GMPSharedMem() {
     for (size_t i = 0; i < sizeof(mGmpAllocated) / sizeof(mGmpAllocated[0]);
@@ -48,7 +49,7 @@ class GMPSharedMem {
 
 class GMPSharedMemManager {
  public:
-  explicit GMPSharedMemManager(GMPSharedMem* aData) : mData(aData) {}
+  explicit GMPSharedMemManager(GMPSharedMem* aData) : mMutex("GMPSharedMemManager::mMutex"), mData(aData) {}
   virtual ~GMPSharedMemManager() = default;
 
   virtual bool MgrAllocShmem(GMPSharedMem::GMPMemoryClasses aClass,
@@ -74,6 +75,7 @@ class GMPSharedMemManager {
     return mData->mGmpFreelist[aTypes];
   }
 
+  Mutex mMutex;
   GMPSharedMem* mData;
 };
 

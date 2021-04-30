@@ -25,21 +25,43 @@ WebrtcVideoDecoderFactory::CreateVideoDecoder(
     const webrtc::SdpVideoFormat& aFormat) {
   std::unique_ptr<webrtc::VideoDecoder> decoder;
   auto type = webrtc::PayloadStringToCodecType(aFormat.name);
-
   // Attempt to create a decoder using MediaDataDecoder.
   decoder.reset(MediaDataCodec::CreateDecoder(type));
   if (decoder) {
     return decoder;
   }
 
-  switch (type) {
-    case webrtc::VideoCodecType::kVideoCodecH264: {
-      // Get an external decoder
-      auto gmpDecoder = WrapUnique(GmpVideoCodec::CreateDecoder(mPCHandle));
+  // Attempt to create a GMP decoder.
+  {
+    nsCString tag;
+
+    switch (type) {
+    case webrtc::VideoCodecType::kVideoCodecH264:
+      tag = "h264"_ns;
+      break;
+    case webrtc::VideoCodecType::kVideoCodecVP8:
+      tag = "vp8"_ns;
+      break;
+    case webrtc::VideoCodecType::kVideoCodecVP9:
+      tag = "vp9"_ns;
+      break;
+    default:
+      return nullptr;
+    }
+
+    if (HaveGMPFor(nsLiteralCString(GMP_API_VIDEO_DECODER), { tag })) {
+      auto gmpDecoder = WrapUnique(GmpVideoCodec::CreateDecoder(mPCHandle, type));
       mCreatedGmpPluginEvent.Forward(*gmpDecoder->InitPluginEvent());
       mReleasedGmpPluginEvent.Forward(*gmpDecoder->ReleasePluginEvent());
       decoder.reset(gmpDecoder.release());
-      break;
+      return decoder;
+    }
+  }
+
+  switch (type) {
+    case webrtc::VideoCodecType::kVideoCodecH264: {
+      // No support for software h264.
+      return nullptr;
     }
 
     // Use libvpx decoders as fallbacks.
@@ -95,6 +117,7 @@ WebrtcVideoEncoderFactory::InternalFactory::CreateVideoEncoder(
   MOZ_ASSERT(Supports(aFormat));
 
   std::unique_ptr<webrtc::VideoEncoder> platformEncoder;
+  auto type = webrtc::PayloadStringToCodecType(aFormat.name);
   platformEncoder.reset(MediaDataCodec::CreateEncoder(aFormat));
   const bool fallback = StaticPrefs::media_webrtc_software_encoder_fallback();
   if (!fallback && platformEncoder) {
@@ -102,14 +125,37 @@ WebrtcVideoEncoderFactory::InternalFactory::CreateVideoEncoder(
   }
 
   std::unique_ptr<webrtc::VideoEncoder> encoder;
-  switch (webrtc::PayloadStringToCodecType(aFormat.name)) {
-    case webrtc::VideoCodecType::kVideoCodecH264: {
-      // get an external encoder
-      auto gmpEncoder = WrapUnique(GmpVideoCodec::CreateEncoder(mPCHandle));
+  // Attempt to create a GMP encoder.
+  {
+    nsCString tag;
+
+    switch (type) {
+    case webrtc::VideoCodecType::kVideoCodecH264:
+      tag = "h264"_ns;
+      break;
+    case webrtc::VideoCodecType::kVideoCodecVP8:
+      tag = "vp8"_ns;
+      break;
+    case webrtc::VideoCodecType::kVideoCodecVP9:
+      tag = "vp9"_ns;
+      break;
+    default:
+      return nullptr;
+    }
+
+    if (HaveGMPFor(nsLiteralCString(GMP_API_VIDEO_ENCODER), { tag })) {
+      auto gmpEncoder = WrapUnique(GmpVideoCodec::CreateEncoder(mPCHandle, type));
       mCreatedGmpPluginEvent.Forward(*gmpEncoder->InitPluginEvent());
       mReleasedGmpPluginEvent.Forward(*gmpEncoder->ReleasePluginEvent());
       encoder.reset(gmpEncoder.release());
-      break;
+      return encoder;
+    }
+  }
+
+  switch (type) {
+    case webrtc::VideoCodecType::kVideoCodecH264: {
+      // No support for software h264.
+      return nullptr;
     }
     // libvpx fallbacks.
     case webrtc::VideoCodecType::kVideoCodecVP8:

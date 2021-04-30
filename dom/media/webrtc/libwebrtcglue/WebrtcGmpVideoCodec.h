@@ -158,7 +158,7 @@ class WebrtcGmpVideoEncoder : public GMPVideoEncoderCallbackProxy,
  public:
   NS_INLINE_DECL_THREADSAFE_REFCOUNTING(WebrtcGmpVideoEncoder, final);
 
-  explicit WebrtcGmpVideoEncoder(std::string aPCHandle);
+  explicit WebrtcGmpVideoEncoder(std::string aPCHandle, webrtc::VideoCodecType aType);
 
   // Implement VideoEncoder interface, sort of.
   // (We cannot use |Release|, since that's needed for nsRefPtr)
@@ -293,6 +293,7 @@ class WebrtcGmpVideoEncoder : public GMPVideoEncoderCallbackProxy,
   webrtc::EncodedImageCallback* mCallback;
   Maybe<uint64_t> mCachedPluginId;
   const std::string mPCHandle;
+  webrtc::VideoCodecType mCodecType;
 
   struct InputImageData {
     int64_t timestamp_us;
@@ -311,9 +312,9 @@ class WebrtcGmpVideoEncoder : public GMPVideoEncoderCallbackProxy,
 // delete the "real" encoder.
 class WebrtcVideoEncoderProxy : public WebrtcVideoEncoder {
  public:
-  explicit WebrtcVideoEncoderProxy(
-      RefPtr<RefCountedWebrtcVideoEncoder> aEncoder)
-      : mEncoderImpl(std::move(aEncoder)) {}
+   explicit WebrtcVideoEncoderProxy(
+       RefPtr<RefCountedWebrtcVideoEncoder> aEncoder)
+       : mEncoderImpl(std::move(aEncoder)) {}
 
   virtual ~WebrtcVideoEncoderProxy() {
     RegisterEncodeCompleteCallback(nullptr);
@@ -359,7 +360,7 @@ class WebrtcVideoEncoderProxy : public WebrtcVideoEncoder {
 
 class WebrtcGmpVideoDecoder : public GMPVideoDecoderCallbackProxy {
  public:
-  explicit WebrtcGmpVideoDecoder(std::string aPCHandle);
+  explicit WebrtcGmpVideoDecoder(std::string aPCHandle, webrtc::VideoCodecType aType);
   NS_INLINE_DECL_THREADSAFE_REFCOUNTING(WebrtcGmpVideoDecoder, final);
 
   // Implement VideoEncoder interface, sort of.
@@ -449,6 +450,8 @@ class WebrtcGmpVideoDecoder : public GMPVideoDecoderCallbackProxy {
   Maybe<uint64_t> mCachedPluginId;
   Atomic<GMPErr, ReleaseAcquire> mDecoderStatus;
   const std::string mPCHandle;
+  webrtc::VideoCodecType mCodecType;
+  webrtc::VideoCodec mCodecSettings;
 
   MediaEventProducer<uint64_t> mInitPluginEvent;
   MediaEventProducer<uint64_t> mReleasePluginEvent;
@@ -461,8 +464,9 @@ class WebrtcGmpVideoDecoder : public GMPVideoDecoderCallbackProxy {
 // the "real" encoder.
 class WebrtcVideoDecoderProxy : public WebrtcVideoDecoder {
  public:
-  explicit WebrtcVideoDecoderProxy(std::string aPCHandle)
-      : mDecoderImpl(new WebrtcGmpVideoDecoder(std::move(aPCHandle))) {}
+   explicit WebrtcVideoDecoderProxy(std::string aPCHandle, webrtc::VideoCodecType type)
+       : mDecoderImpl(new WebrtcGmpVideoDecoder(std::move(aPCHandle), type)) {}
+
 
   virtual ~WebrtcVideoDecoderProxy() {
     RegisterDecodeCompleteCallback(nullptr);
