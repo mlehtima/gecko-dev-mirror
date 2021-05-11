@@ -28,6 +28,7 @@
 #include "ScrollbarDrawingAndroid.h"
 #include "ScrollbarDrawingCocoa.h"
 #include "ScrollbarDrawingGTK.h"
+#include "ScrollbarDrawingQt.h"
 #include "ScrollbarDrawingWin.h"
 #include "ScrollbarDrawingWin11.h"
 
@@ -1449,6 +1450,8 @@ UniquePtr<ScrollbarDrawing> Theme::ScrollbarStyle() {
   return MakeUnique<ScrollbarDrawingCocoa>();
 #elif MOZ_WIDGET_GTK
   return MakeUnique<ScrollbarDrawingGTK>();
+#elif MOZ_WIDGET_QT
+  return MakeUnique<ScrollbarDrawingQt>();
 #elif ANDROID
   return MakeUnique<ScrollbarDrawingAndroid>();
 #else

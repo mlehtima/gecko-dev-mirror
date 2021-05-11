@@ -32,6 +32,7 @@ class ScrollbarDrawing {
     Android,
     Cocoa,
     Gtk,
+    Qt,
     Win10,
     Win11,
   };

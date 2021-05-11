@@ -243,6 +243,7 @@ UNIFIED_SOURCES += [
     "ScrollbarDrawingAndroid.cpp",
     "ScrollbarDrawingCocoa.cpp",
     "ScrollbarDrawingGTK.cpp",
+    "ScrollbarDrawingQt.cpp",
     "ScrollbarDrawingWin.cpp",
     "ScrollbarDrawingWin11.cpp",
     "SharedWidgetUtils.cpp",

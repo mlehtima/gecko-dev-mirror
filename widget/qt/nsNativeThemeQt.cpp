@@ -1,0 +1,312 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#include "nsNativeThemeQt.h"
+
+#include "nsIFrame.h"
+#include "nsStyleConsts.h"
+#include "QtColors.h"
+#include "nsCSSRendering.h"
+#include "PathHelpers.h"
+#include "nsLayoutUtils.h"
+#include "mozilla/ClearOnShutdown.h"
+#include "mozilla/StaticPrefs_widget.h"
+#include "Theme.h"
+
+NS_IMPL_ISUPPORTS_INHERITED(nsNativeThemeQt, nsNativeTheme, nsITheme)
+
+using namespace mozilla;
+using namespace mozilla::gfx;
+
+static const Float STROKE_WIDTH = Float(4.0f);
+static const Float RECT_RADII = Float(2.0f);
+static const int32_t RADIO_CHECK_DEFLATION = 3;
+static const int32_t RADIO_BORDER_DEFLATION = 2;
+static const CSSIntCoord SCROLL_BAR_SIZE = 17;
+
+
+
+static void ClampRectAndMoveToCenter(nsRect& aRect) {
+  if (aRect.width < aRect.height) {
+    aRect.y += (aRect.height - aRect.width) / 2;
+    aRect.height = aRect.width;
+    return;
+  }
+
+  if (aRect.height < aRect.width) {
+    aRect.x += (aRect.width - aRect.height) / 2;
+    aRect.width = aRect.height;
+  }
+}
+/*
+static void PaintCheckboxControl(nsIFrame* aFrame, DrawTarget* aDrawTarget,
+                                 const nsRect& aRect,
+                                 const EventStates& aState) {
+  // We fake native drawing of appearance: checkbox items out
+  // here, and use hardcoded colours from QtColors.h to
+  // simulate native theming.
+  RectCornerRadii innerRadii(RECT_RADII);
+  nsRect paddingRect =
+      nsCSSRendering::GetBoxShadowInnerPaddingRect(aFrame, aRect);
+  const nscoord twipsPerPixel = aFrame->PresContext()->DevPixelsToAppUnits(1);
+  Rect shadowGfxRect = NSRectToRect(paddingRect, twipsPerPixel);
+  shadowGfxRect.Round();
+  RefPtr<Path> roundedRect =
+      MakePathForRoundedRect(*aDrawTarget, shadowGfxRect, innerRadii);
+
+  aDrawTarget->Fill(
+      roundedRect,
+      ColorPattern(ToDeviceColor(mozilla::widget::sQtBackgroundColor)));
+  if (aState.HasState(NS_EVENT_STATE_DISABLED)) {
+    aDrawTarget->Fill(
+        roundedRect,
+        ColorPattern(ToDeviceColor(mozilla::widget::sQtDisabledColor)));
+  } else if (aState.HasState(NS_EVENT_STATE_ACTIVE)) {
+    aDrawTarget->Fill(
+        roundedRect,
+        ColorPattern(ToDeviceColor(mozilla::widget::sQtActiveColor)));
+  }
+  aDrawTarget->Stroke(
+      roundedRect,
+      ColorPattern(ToDeviceColor(mozilla::widget::sQtBorderColor)),
+      StrokeOptions(STROKE_WIDTH));
+}
+
+static void PaintCheckMark(nsIFrame* aFrame, DrawTarget* aDrawTarget,
+                           const nsRect& aRect) {
+
+  // Points come from the coordinates on a 7X7 unit box centered at 0,0
+  const int32_t checkPolygonX[] = {-3, -1, 3, 3, -1, -3};
+  const int32_t checkPolygonY[] = {-1, 1, -3, -1, 3, 1};
+  const int32_t checkNumPoints = sizeof(checkPolygonX) / sizeof(int32_t);
+  const int32_t checkSize = 9;  // 2 units of padding on either side
+                                // of the 7x7 unit checkmark
+
+  // Scale the checkmark based on the smallest dimension
+  nscoord paintScale = std::min(aRect.width, aRect.height) / checkSize;
+  nsPoint paintCenter(aRect.x + aRect.width / 2, aRect.y + aRect.height / 2);
+
+  RefPtr<PathBuilder> builder = aDrawTarget->CreatePathBuilder();
+  nsPoint p = paintCenter + nsPoint(checkPolygonX[0] * paintScale,
+                                    checkPolygonY[0] * paintScale);
+
+  int32_t appUnitsPerDevPixel = aFrame->PresContext()->AppUnitsPerDevPixel();
+  builder->MoveTo(NSPointToPoint(p, appUnitsPerDevPixel));
+  for (int32_t polyIndex = 1; polyIndex < checkNumPoints; polyIndex++) {
+    p = paintCenter + nsPoint(checkPolygonX[polyIndex] * paintScale,
+                              checkPolygonY[polyIndex] * paintScale);
+    builder->LineTo(NSPointToPoint(p, appUnitsPerDevPixel));
+  }
+  RefPtr<Path> path = builder->Finish();
+  aDrawTarget->Fill(
+      path, ColorPattern(ToDeviceColor(mozilla::widget::sQtCheckColor)));
+}
+
+static void PaintIndeterminateMark(nsIFrame* aFrame, DrawTarget* aDrawTarget,
+                                   const nsRect& aRect) {
+  int32_t appUnitsPerDevPixel = aFrame->PresContext()->AppUnitsPerDevPixel();
+
+  nsRect rect(aRect);
+  rect.y += (rect.height - rect.height / 4) / 2;
+  rect.height /= 4;
+
+  Rect devPxRect = NSRectToSnappedRect(rect, appUnitsPerDevPixel, *aDrawTarget);
+
+  aDrawTarget->FillRect(
+      devPxRect,
+      ColorPattern(ToDeviceColor(mozilla::widget::sQtCheckColor)));
+}
+
+static void PaintRadioControl(nsIFrame* aFrame, DrawTarget* aDrawTarget,
+                              const nsRect& aRect, const EventStates& aState) {
+  // We fake native drawing of appearance: radio items out
+  // here, and use hardcoded colours from QtColors.h to
+  // simulate native theming.
+  const nscoord twipsPerPixel = aFrame->PresContext()->DevPixelsToAppUnits(1);
+  Rect devPxRect = NSRectToRect(aRect, twipsPerPixel);
+  devPxRect.Deflate(RADIO_BORDER_DEFLATION);
+
+  RefPtr<PathBuilder> builder = aDrawTarget->CreatePathBuilder();
+  AppendEllipseToPath(builder, devPxRect.Center(), devPxRect.Size());
+  RefPtr<Path> ellipse = builder->Finish();
+
+  aDrawTarget->Fill(
+      ellipse,
+      ColorPattern(ToDeviceColor(mozilla::widget::sQtBackgroundColor)));
+
+  if (aState.HasState(NS_EVENT_STATE_DISABLED)) {
+    aDrawTarget->Fill(
+        ellipse,
+        ColorPattern(ToDeviceColor(mozilla::widget::sQtDisabledColor)));
+  } else if (aState.HasState(NS_EVENT_STATE_ACTIVE)) {
+    aDrawTarget->Fill(
+        ellipse,
+        ColorPattern(ToDeviceColor(mozilla::widget::sQtActiveColor)));
+  }
+  aDrawTarget->Stroke(
+      ellipse,
+      ColorPattern(ToDeviceColor(mozilla::widget::sQtBorderColor)),
+      StrokeOptions(STROKE_WIDTH));
+}
+
+static void PaintCheckedRadioButton(nsIFrame* aFrame, DrawTarget* aDrawTarget,
+                                    const nsRect& aRect) {
+  // The dot is an ellipse RADIO_CHECK_DEFLATION px on all sides
+  // smaller than the content-box, drawn in the foreground color.
+  nsRect rect(aRect);
+  rect.Deflate(nsPresContext::CSSPixelsToAppUnits(RADIO_CHECK_DEFLATION));
+
+  Rect devPxRect = ToRect(nsLayoutUtils::RectToGfxRect(
+      rect, aFrame->PresContext()->AppUnitsPerDevPixel()));
+
+  RefPtr<PathBuilder> builder = aDrawTarget->CreatePathBuilder();
+  AppendEllipseToPath(builder, devPxRect.Center(), devPxRect.Size());
+  RefPtr<Path> ellipse = builder->Finish();
+  aDrawTarget->Fill(
+      ellipse,
+      ColorPattern(ToDeviceColor(mozilla::widget::sQtCheckColor)));
+}
+*/
+NS_IMETHODIMP
+nsNativeThemeQt::DrawWidgetBackground(gfxContext* aContext, nsIFrame* aFrame,
+                                      StyleAppearance aWidgetType,
+                                      const nsRect& aRect, const nsRect& aDirtyRect,
+                                      DrawOverflow) {
+/*
+ FIXME is this still wanted?
+  EventStates eventState = GetContentState(aFrame, aWidgetType);
+  nsRect rect(aRect);
+  ClampRectAndMoveToCenter(rect);
+
+//  const Colors colors(aFrame, aWidgetType);
+//  DPIRatio dpiRatio = GetDPIRatio(aFrame, aWidgetType);
+  switch (aWidgetType) {
+    case StyleAppearance::Radio:
+      PaintRadioControl(aFrame, aContext->GetDrawTarget(), rect, eventState);
+      if (eventState.HasState(NS_EVENT_STATE_DISABLED)) {
+        PaintCheckedRadioButton(aFrame, aContext->GetDrawTarget(), rect);
+      }
+      break;
+    case StyleAppearance::Checkbox:
+      PaintCheckboxControl(aFrame, aContext->GetDrawTarget(), rect, eventState);
+      if (eventState.HasState(NS_EVENT_STATE_CHECKED)) {
+        PaintCheckMark(aFrame, aContext->GetDrawTarget(), rect);
+      }
+      if (eventState.HasState(NS_EVENT_STATE_INDETERMINATE)) {
+        PaintIndeterminateMark(aFrame, aContext->GetDrawTarget(), rect);
+      }
+      break;
+    default:
+      MOZ_ASSERT_UNREACHABLE(
+          "Should not get here with a widget type we don't support.");
+      return NS_ERROR_NOT_IMPLEMENTED;
+  }
+*/
+  return NS_OK;
+}
+
+LayoutDeviceIntMargin nsNativeThemeQt::GetWidgetBorder(
+    nsDeviceContext* aContext, nsIFrame* aFrame, StyleAppearance aWidgetType) {
+  return LayoutDeviceIntMargin();
+}
+
+bool nsNativeThemeQt::GetWidgetPadding(nsDeviceContext* aContext,
+                                            nsIFrame* aFrame,
+                                            StyleAppearance aWidgetType,
+                                            LayoutDeviceIntMargin* aResult) {
+  switch (aWidgetType) {
+    // Radios and checkboxes return a fixed size in GetMinimumWidgetSize
+    // and have a meaningful baseline, so they can't have
+    // author-specified padding.
+    case StyleAppearance::Checkbox:
+    case StyleAppearance::Radio:
+      aResult->SizeTo(0, 0, 0, 0);
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool nsNativeThemeQt::GetWidgetOverflow(nsDeviceContext* aContext,
+                                             nsIFrame* aFrame,
+                                             StyleAppearance aWidgetType,
+                                             nsRect* aOverflowRect) {
+  return false;
+}
+
+NS_IMETHODIMP
+nsNativeThemeQt::GetMinimumWidgetSize(nsPresContext* aPresContext,
+                                           nsIFrame* aFrame,
+                                           StyleAppearance aWidgetType,
+                                           LayoutDeviceIntSize* aResult,
+                                           bool* aIsOverridable) {
+  if (aWidgetType == StyleAppearance::Radio ||
+      aWidgetType == StyleAppearance::Checkbox) {
+    // 9px + (1px padding + 1px border) * 2
+    aResult->width = aPresContext->CSSPixelsToDevPixels(13);
+    aResult->height = aPresContext->CSSPixelsToDevPixels(13);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsNativeThemeQt::WidgetStateChanged(nsIFrame* aFrame,
+                                         StyleAppearance aWidgetType,
+                                         nsAtom* aAttribute,
+                                         bool* aShouldRepaint,
+                                         const nsAttrValue* aOldValue) {
+  if (aWidgetType == StyleAppearance::Radio ||
+      aWidgetType == StyleAppearance::Checkbox) {
+    if (aAttribute == nsGkAtoms::active || aAttribute == nsGkAtoms::disabled ||
+        aAttribute == nsGkAtoms::hover) {
+      *aShouldRepaint = true;
+      return NS_OK;
+    }
+  }
+
+  *aShouldRepaint = false;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsNativeThemeQt::ThemeChanged() { return NS_OK; }
+
+NS_IMETHODIMP_(bool)
+nsNativeThemeQt::ThemeSupportsWidget(nsPresContext* aPresContext,
+                                          nsIFrame* aFrame,
+                                          StyleAppearance aWidgetType) {
+  switch (aWidgetType) {
+    case StyleAppearance::Radio:
+    case StyleAppearance::Checkbox:
+      return true;
+    default:
+      return false;
+  }
+}
+
+NS_IMETHODIMP_(bool)
+nsNativeThemeQt::WidgetIsContainer(StyleAppearance aWidgetType) {
+  return false;
+}
+
+bool nsNativeThemeQt::ThemeDrawsFocusForWidget(
+    nsIFrame* aFrame,
+    StyleAppearance aWidgetType) {
+  return false;
+}
+
+bool nsNativeThemeQt::ThemeNeedsComboboxDropmarker() { return false; }
+
+nsITheme::Transparency nsNativeThemeQt::GetWidgetTransparency(
+    nsIFrame* aFrame, StyleAppearance aWidgetType) {
+  return eUnknownTransparency;
+}
+
+already_AddRefed<mozilla::widget::Theme> do_CreateNativeThemeDoNotUseDirectly() {
+  if (gfxPlatform::IsHeadless()) {
+    return do_AddRef(new mozilla::widget::Theme(mozilla::widget::Theme::ScrollbarStyle()));
+  }
+  return do_AddRef(new nsNativeThemeQt());
+}
