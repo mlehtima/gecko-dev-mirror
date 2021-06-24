@@ -1197,6 +1197,27 @@ AC_DEFINE_UNQUOTED(MOZ_DISTRIBUTION_ID,"$MOZ_DISTRIBUTION_ID")
 AC_SUBST(MOZ_DISTRIBUTION_ID)
 
 dnl ========================================================
+dnl dconf support
+dnl ========================================================
+
+if test "$MOZ_ENABLE_GTK" -o "$MOZ_ENABLE_QT"
+then
+    MOZ_ENABLE_DCONF=1
+    MOZ_ARG_DISABLE_BOOL(dconf,
+        [  --disable-dconf          Disable dconf support ],
+           MOZ_ENABLE_DCONF=,
+           MOZ_ENABLE_DCONF=1)
+    if test -n "$MOZ_ENABLE_DCONF"
+    then
+        PKG_CHECK_MODULES(MOZ_DCONF, dconf,
+            MOZ_ENABLE_DCONF=1,
+            MOZ_ENABLE_DCONF=)
+        AC_DEFINE(MOZ_ENABLE_DCONF)
+  fi
+fi
+AC_SUBST(MOZ_ENABLE_DCONF)
+
+dnl ========================================================
 dnl = Enable code optimization. ON by default.
 dnl ========================================================
 

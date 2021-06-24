@@ -980,6 +980,17 @@ check_prog(
 )
 
 
+option(
+    "--enable-system-sqlite",
+    default=False,
+    help="{Use|Do not use} system sqlite",
+)
+
+pkg_check_modules("SQLITE", "sqlite3 >= 3.31.1", when="--enable-system-sqlite")
+
+set_config("MOZ_SYSTEM_SQLITE", True, when="--enable-system-sqlite")
+
+
 @depends(js_standalone, target)
 def system_zlib_default(js_standalone, target):
     return js_standalone and target.kernel not in ("WINNT", "Darwin")
