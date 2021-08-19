@@ -362,7 +362,7 @@ GLContextEGL::GLContextEGL(const std::shared_ptr<EglDisplay> egl,
       mConfig(config),
       mContext(context),
       mSurface(surface),
-      mFallbackSurface(CreateFallbackSurface(*mEgl, mConfig)) {
+      mFallbackSurface(EGL_NO_SURFACE) {
 #ifdef DEBUG
   printf_stderr("Initializing context %p surface %p on display %p\n", mContext,
                 mSurface, mEgl->mDisplay);
