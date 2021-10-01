@@ -377,6 +377,11 @@ NS_IMETHODIMP nsContentTreeOwner::IsWindowModal(bool* _retval) {
   return NS_OK;
 }
 
+NS_IMETHODIMP nsContentTreeOwner::DestroyBrowserWindow() {
+   NS_ERROR("Haven't Implemented this yet");
+   return NS_ERROR_FAILURE;
+}
+
 //*****************************************************************************
 // nsContentTreeOwner::nsIBaseWindow
 //*****************************************************************************
