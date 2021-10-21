@@ -988,7 +988,7 @@ class LoginManagerParent extends JSWindowActorParent {
       }
     }
 
-    let promptBrowser = LoginHelper.getBrowserForPrompt(browser);
+    let promptBrowser = browsingContext.window;
     let prompter = this._getPrompter(browser);
 
     if (!canMatchExistingLogin) {
@@ -1362,7 +1362,7 @@ class LoginManagerParent extends JSWindowActorParent {
     }
 
     let prompter = this._getPrompter(browser);
-    let promptBrowser = LoginHelper.getBrowserForPrompt(browser);
+    let promptBrowser = browsingContext.window;
 
     if (existingLogin) {
       // Show a change doorhanger to allow modifying an already-saved login
