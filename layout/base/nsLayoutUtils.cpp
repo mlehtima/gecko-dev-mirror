@@ -690,6 +690,23 @@ bool nsLayoutUtils::AsyncPanZoomEnabled(const nsIFrame* aFrame) {
   return widget->AsyncPanZoomEnabled();
 }
 
+static bool DocumentHasFixedUnityZoom(const mozilla::dom::Document* aDocument)
+{
+  if (!aDocument) {
+    return false;
+  }
+  ViewportMetaData metaData = aDocument->GetViewportMetaData();
+  return (!metaData.mMinimumScale.IsEmpty() && metaData.mMinimumScale == metaData.mMaximumScale) ||
+          metaData.mUserScalable.EqualsLiteral("0") ||
+          metaData.mUserScalable.EqualsLiteral("no") ||
+          metaData.mUserScalable.EqualsLiteral("false");
+}
+
+static bool IsDesktopView(const mozilla::dom::Document* aDocument) {
+  nsCOMPtr<nsPIDOMWindowOuter> window = aDocument ? aDocument->GetWindow() : nullptr;
+  return window ? window->IsDesktopModeViewport() : false;
+}
+
 bool nsLayoutUtils::AllowZoomingForDocument(
     const mozilla::dom::Document* aDocument) {
   if (aDocument->GetPresShell() &&
@@ -699,10 +716,11 @@ bool nsLayoutUtils::AllowZoomingForDocument(
   // True if we allow zooming for all documents on this platform, or if we are
   // in RDM and handling meta viewports, which force zoom under some
   // circumstances.
+
   BrowsingContext* bc = aDocument ? aDocument->GetBrowsingContext() : nullptr;
-  return StaticPrefs::apz_allow_zooming() ||
-         (bc && bc->InRDMPane() &&
-          nsLayoutUtils::ShouldHandleMetaViewport(aDocument));
+  return (StaticPrefs::apz_allow_zooming() && !DocumentHasFixedUnityZoom(aDocument)) ||
+         (bc && bc->InRDMPane() && nsLayoutUtils::ShouldHandleMetaViewport(aDocument)) ||
+         IsDesktopView(aDocument);
 }
 
 static bool HasVisibleAnonymousContents(Document* aDoc) {
