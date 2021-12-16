@@ -1336,6 +1336,15 @@ set_define("MOZ_PEERCONNECTION", webrtc)
 set_config("MOZ_WEBRTC_ASSERT_ALWAYS", webrtc)
 set_define("MOZ_WEBRTC_ASSERT_ALWAYS", webrtc)
 
+
+with only_when(webrtc):
+    geckocamera = pkg_check_modules(
+        "LIBGECKOCAMERA",
+        "geckocamera",
+        allow_missing=True)
+
+    set_config("MOZ_ENABLE_WEBRTC_GECKOCAMERA", depends_if(geckocamera)(lambda _: True))
+
 # RAW media
 # ==============================================================
 

@@ -56,6 +56,10 @@
 #ifdef MOZ_OMX
 #  include "OmxDecoderModule.h"
 #endif
+#ifdef MOZ_EMBEDLITE
+#  include "GeckoCameraDecoderModule.h"
+#endif
+
 
 #include <functional>
 
@@ -170,6 +174,9 @@ class PDMInitializer final {
 #endif
 #ifdef MOZ_FFMPEG
     FFmpegRuntimeLinker::Init();
+#endif
+#ifdef MOZ_EMBEDLITE
+    GeckoCameraDecoderModule::Init();
 #endif
   }
 
@@ -680,6 +687,12 @@ void PDMFactory::CreateDefaultPDMs() {
   if (StaticPrefs::media_android_media_codec_enabled()) {
     StartupPDM(AndroidDecoderModule::Create(),
                StaticPrefs::media_android_media_codec_preferred());
+  }
+#endif
+#ifdef MOZ_EMBEDLITE
+  if (StaticPrefs::media_gecko_camera_codec_enabled()) {
+    StartupPDM(GeckoCameraDecoderModule::Create(),
+               StaticPrefs::media_gecko_camera_codec_preferred());
   }
 #endif
 
