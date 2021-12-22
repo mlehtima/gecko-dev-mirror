@@ -412,8 +412,10 @@ static nsresult DoCORSChecks(nsIChannel* aChannel, nsILoadInfo* aLoadInfo,
   MOZ_RELEASE_ASSERT(aInAndOutListener,
                      "can not perform CORS checks without a listener");
 
+  static bool disableCorsChecks = Preferences::GetBool("security.disable_cors_checks", false);
+
   // No need to set up CORS if TriggeringPrincipal is the SystemPrincipal.
-  if (aLoadInfo->TriggeringPrincipal()->IsSystemPrincipal()) {
+  if (aLoadInfo->TriggeringPrincipal()->IsSystemPrincipal() || disableCorsChecks) {
     return NS_OK;
   }
 
