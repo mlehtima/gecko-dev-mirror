@@ -90,6 +90,7 @@ def old_configure_options(*options):
 @old_configure_options(
     "--cache-file",
     "--datadir",
+    "--enable-dconf",
     "--enable-official-branding",
     "--includedir",
     "--libdir",
