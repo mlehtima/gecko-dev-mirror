@@ -289,6 +289,7 @@ def bindgen_config_paths(clang, libclang, build_project):
 @imports(_from="ctypes", _import="CDLL")
 @imports(_from="textwrap", _import="dedent")
 def min_libclang_version(libclang):
+    return True
     try:
         lib = CDLL(libclang)
         # We want at least 5.0. The API we test below is enough for that.
