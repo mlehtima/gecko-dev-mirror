@@ -407,6 +407,14 @@ class CompositorBridgeParent : public CompositorBridgeParentBase,
   void ScheduleRenderOnCompositorThread(wr::RenderReasons aReasons) override;
 
   void ScheduleComposition(wr::RenderReasons aReasons);
+  void SchedulePauseOnCompositorThread();
+  void InvalidateOnCompositorThread();
+  /**
+   * Returns true if a surface was obtained and the resume succeeded; false
+   * otherwise.
+   */
+  bool ScheduleResumeOnCompositorThread();
+  bool ScheduleResumeOnCompositorThread(int x, int y, int width, int height);
 
   /**
    * Check rotation info and schedule a rendering task if needed.
