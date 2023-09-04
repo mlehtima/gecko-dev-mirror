@@ -58,6 +58,8 @@ class GLReadTexImageHelper;
 class SharedSurface;
 class SymbolLoader;
 struct SymLoadStruct;
+class SwapChain;
+class GLScreenBuffer;
 }  // namespace gl
 
 namespace layers {
@@ -2028,7 +2030,9 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
  public:
   bool mElideDuplicateBindFramebuffers = false;
 
-  void fBindFramebuffer(const GLenum target, const GLuint fb) const {
+  void fBindFramebuffer(const GLenum target, const GLuint fb) const;
+
+  void raw_fBindFramebuffer(const GLenum target, const GLuint fb) const {
     if (mElideDuplicateBindFramebuffers) {
       MOZ_ASSERT(mCachedDrawFb ==
                  GetIntAs<GLuint>(LOCAL_GL_DRAW_FRAMEBUFFER_BINDING));
@@ -3579,6 +3583,7 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
  public:
   GLBlitHelper* BlitHelper();
   GLReadTexImageHelper* ReadTexImageHelper();
+  UniquePtr<SwapChain> mSwapChain;
 
   // Assumes shares are created by all sharing with the same global context.
   bool SharesWith(const GLContext* other) const {
@@ -3596,6 +3601,12 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
     return thisShared == otherShared;
   }
 
+ protected:
+  friend class GLScreenBuffer;
+  friend class GLContextProviderEGL;
+  UniquePtr<GLScreenBuffer> mScreen;
+
+ public:
   bool IsFramebufferComplete(GLuint fb, GLenum* status = nullptr);
 
   // Does not check completeness.
@@ -3623,9 +3634,15 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
 
   bool IsOffscreen() const { return mDesc.isOffscreen; }
 
+  GLScreenBuffer* Screen() const { return mScreen.get(); }
+
+  SwapChain* GetSwapChain() const { return mSwapChain.get(); }
+
   bool WorkAroundDriverBugs() const { return mWorkAroundDriverBugs; }
 
   bool IsOffscreenSizeAllowed(const gfx::IntSize& aSize) const;
+
+  bool ResizeScreenBuffer(const gfx::IntSize& size);
 
   virtual bool Init();
 
@@ -3859,7 +3876,7 @@ class Texture final {
  *
  * See mozilla::gl::CreateTexture.
  */
-UniquePtr<Texture> CreateTexture(GLContext&, const gfx::IntSize& size);
+GLuint CreateTexture(GLContext& gl, const gfx::IntSize& aSize);
 
 /**
  * Helper function that calculates the number of bytes required per

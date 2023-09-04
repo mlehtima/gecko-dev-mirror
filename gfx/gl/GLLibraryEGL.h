@@ -128,7 +128,8 @@ class GLLibraryEGL final {
   std::unordered_map<EGLDisplay, std::weak_ptr<EglDisplay>> mActiveDisplays;
 
  public:
-  static RefPtr<GLLibraryEGL> Get(nsACString* const out_failureId);
+  static RefPtr<GLLibraryEGL> Get(nsACString* const out_failureId, void* aDisplay);
+  bool Init(bool forceAccel, nsACString* const out_failureId, EGLDisplay aDisplay = EGL_NO_DISPLAY);
   static void Shutdown();
 
  private:
@@ -137,7 +138,6 @@ class GLLibraryEGL final {
   static StaticMutex sMutex;
   static StaticRefPtr<GLLibraryEGL> sInstance GUARDED_BY(sMutex);
 
-  bool Init(nsACString* const out_failureId);
   void InitLibExtensions();
 
   std::shared_ptr<EglDisplay> CreateDisplayLocked(
@@ -148,7 +148,8 @@ class GLLibraryEGL final {
   Maybe<SymbolLoader> GetSymbolLoader() const;
 
   std::shared_ptr<EglDisplay> CreateDisplay(bool forceAccel,
-                                            nsACString* const out_failureId);
+                                            nsACString* const out_failureId,
+                                            EGLDisplay aDisplay = EGL_NO_DISPLAY);
   std::shared_ptr<EglDisplay> CreateDisplay(ID3D11Device*);
   std::shared_ptr<EglDisplay> DefaultDisplay(nsACString* const out_failureId);
 

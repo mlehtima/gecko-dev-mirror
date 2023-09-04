@@ -979,6 +979,44 @@ static bool CreateConfigScreen(EglDisplay& egl, EGLConfig* const aConfig,
   return false;
 }
 
+static StaticMutex sMutex;
+static StaticRefPtr<GLLibraryEGL> gDefaultEglLibrary;
+
+already_AddRefed<GLContext> GLContextProviderEGL::CreateWrappingExisting(
+    void* aContext, void* aSurface, void* aDisplay) {
+  if (!aContext || !aSurface) return nullptr;
+
+  nsCString failureId;
+
+  if (!gDefaultEglLibrary) {
+    gDefaultEglLibrary = GLLibraryEGL::Create(&failureId, aDisplay);
+
+    if (!gDefaultEglLibrary) {
+      gfxCriticalNote << "Failed[3] to load EGL library";
+      return nullptr;
+    }
+  }
+  const std::shared_ptr<EglDisplay> egl = gDefaultEglLibrary.operator->()->DefaultDisplay(&failureId);
+
+  if (!egl) {
+    gfxCriticalNote << "Failed[3] to create EGL library  display: "
+                    << failureId.get();
+    return nullptr;
+  }
+
+  CreateContextFlags flags = CreateContextFlags::NONE;
+  const auto desc = GLContextDesc{{flags}, false};
+
+  EGLConfig config = EGL_NO_CONFIG;
+  RefPtr<GLContextEGL> gl =
+      new GLContextEGL(egl, desc, config,
+                       (EGLSurface)aSurface, (EGLContext)aContext);
+  gl->SetIsDoubleBuffered(true);
+  gl->mOwnsContext = false;
+
+  return gl.forget();
+}
+
 already_AddRefed<GLContext> GLContextProviderEGL::CreateForCompositorWidget(
     CompositorWidget* aCompositorWidget, bool aHardwareWebRender,
     bool /*aForceAccelerated*/) {
@@ -1116,6 +1154,7 @@ RefPtr<GLContextEGL> GLContextEGL::CreateEGLPBufferOffscreenContextImpl(
     const mozilla::gfx::IntSize& size, const bool useGles,
     nsACString* const out_failureId) {
   const EGLConfig config = ChooseConfig(*egl, desc, useGles);
+
   if (config == EGL_NO_CONFIG) {
     *out_failureId = "FEATURE_FAILURE_EGL_NO_CONFIG"_ns;
     NS_WARNING("Failed to find a compatible config.");
@@ -1137,6 +1176,7 @@ RefPtr<GLContextEGL> GLContextEGL::CreateEGLPBufferOffscreenContextImpl(
     surface = GLContextEGL::CreatePBufferSurfaceTryingPowerOfTwo(
         *egl, config, LOCAL_EGL_NONE, pbSize);
   }
+
   if (!surface) {
     *out_failureId = "FEATURE_FAILURE_EGL_POT"_ns;
     NS_WARNING("Failed to create PBuffer for context!");
@@ -1220,6 +1260,40 @@ already_AddRefed<GLContext> GLContextProviderEGL::CreateHeadless(
   return gl.forget();
 }
 
+already_AddRefed<GLContext> GLContextProviderEGL::CreateOffscreen(
+    const mozilla::gfx::IntSize& size,
+    CreateContextFlags flags, nsACString* const out_failureId) {
+
+  RefPtr<GLContext> gl;
+
+  gl = CreateHeadless({CreateContextFlags::REQUIRE_COMPAT_PROFILE}, out_failureId);
+
+  // Init the offscreen with the updated offscreen caps.
+  if (!gl || !gl->IsOffscreenSizeAllowed(size)) {
+    return nullptr;
+  }
+
+  UniquePtr<GLScreenBuffer> newScreen = GLScreenBuffer::Create(gl, size);
+  if ((!newScreen) || (!newScreen->Resize(size))) {
+    return nullptr;
+  }
+
+  // This will rebind to 0 (Screen) if needed when
+  // it falls out of scope.
+  ScopedBindFramebuffer autoFB(gl);
+
+  gl->mScreen = std::move(newScreen);
+
+  if (!gl->MakeCurrent()) {
+    return nullptr;
+  }
+  gl->fBindFramebuffer(LOCAL_GL_FRAMEBUFFER, 0);
+  gl->fScissor(0, 0, size.width, size.height);
+  gl->fViewport(0, 0, size.width, size.height);
+
+  return gl.forget();
+}
+
 // Don't want a global context on Android as 1) share groups across 2 threads
 // fail on many Tegra drivers (bug 759225) and 2) some mobile devices have a
 // very strict limit on global number of GL contexts (bug 754257) and 3) each
@@ -1228,6 +1302,17 @@ already_AddRefed<GLContext> GLContextProviderEGL::CreateHeadless(
 GLContext* GLContextProviderEGL::GetGlobalContext() { return nullptr; }
 
 // -
+
+RefPtr<GLLibraryEGL> DefaultEglLibrary(nsACString* const out_failureId) {
+  StaticMutexAutoLock lock(sMutex);
+  if (!gDefaultEglLibrary) {
+    gDefaultEglLibrary = GLLibraryEGL::Create(out_failureId, EGL_NO_DISPLAY);
+    if (!gDefaultEglLibrary) {
+      NS_WARNING("GLLibraryEGL::Create failed");
+    }
+  }
+  return gDefaultEglLibrary.get();
+}
 
 /*static*/ void GLContextProviderEGL::Shutdown() { GLLibraryEGL::Shutdown(); }
 

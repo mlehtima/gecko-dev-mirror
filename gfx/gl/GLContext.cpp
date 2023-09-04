@@ -960,6 +960,7 @@ bool GLContext::InitImpl() {
 
   // We're ready for final setup.
   fBindFramebuffer(LOCAL_GL_FRAMEBUFFER, 0);
+
   MOZ_GL_ASSERT(this, IsCurrent());
 
   if (ShouldSpew() && IsExtensionSupported(KHR_debug)) {
@@ -1906,6 +1907,8 @@ void GLContext::MarkDestroyed() {
 
   // Null these before they're naturally nulled after dtor, as we want GLContext
   // to still be alive in *their* dtors.
+  mScreen = nullptr;
+  mSwapChain = nullptr;
   mBlitHelper = nullptr;
   mReadTexImageHelper = nullptr;
 
@@ -1913,6 +1916,11 @@ void GLContext::MarkDestroyed() {
   mSymbols = {};
 }
 
+bool GLContext::ResizeScreenBuffer(const gfx::IntSize& size) {
+  if (!IsOffscreenSizeAllowed(size)) return false;
+
+  return mScreen->Resize(size);
+}
 // -
 
 #ifdef MOZ_GL_DEBUG
@@ -2172,6 +2180,33 @@ void SplitByChar(const nsACString& str, const char delim,
   out->push_back(nsCString(substr));
 }
 
+void GLContext::fBindFramebuffer(GLenum target, GLuint framebuffer) const {
+  if (!mScreen) {
+    raw_fBindFramebuffer(target, framebuffer);
+    return;
+  }
+
+  switch (target) {
+    case LOCAL_GL_DRAW_FRAMEBUFFER_EXT:
+      mScreen->BindDrawFB(framebuffer);
+      return;
+
+    case LOCAL_GL_READ_FRAMEBUFFER_EXT:
+      mScreen->BindReadFB(framebuffer);
+      return;
+
+    case LOCAL_GL_FRAMEBUFFER:
+      mScreen->BindFB(framebuffer);
+      return;
+
+    default:
+      // Nothing we care about, likely an error.
+      break;
+  }
+
+  raw_fBindFramebuffer(target, framebuffer);
+}
+
 void GLContext::fCopyTexImage2D(GLenum target, GLint level,
                                 GLenum internalformat, GLint x, GLint y,
                                 GLsizei width, GLsizei height, GLint border) {
@@ -2353,12 +2388,13 @@ void GLContext::fTexImage2D(GLenum target, GLint level, GLint internalformat,
                   type, pixels);
 }
 
-UniquePtr<Texture> CreateTexture(GLContext& gl, const gfx::IntSize& size) {
+GLuint CreateTexture(GLContext& gl, const gfx::IntSize& size) {
   const GLenum target = LOCAL_GL_TEXTURE_2D;
-  const GLenum format = LOCAL_GL_RGBA;
+  const GLenum format = LOCAL_GL_RGB;
 
-  auto tex = MakeUnique<Texture>(gl);
-  ScopedBindTexture autoTex(&gl, tex->name, target);
+  GLuint tex = 0;
+  gl.fGenTextures(1, &tex);
+  ScopedBindTexture autoTex(&gl, tex);
 
   gl.fTexParameteri(target, LOCAL_GL_TEXTURE_MIN_FILTER, LOCAL_GL_LINEAR);
   gl.fTexParameteri(target, LOCAL_GL_TEXTURE_MAG_FILTER, LOCAL_GL_LINEAR);

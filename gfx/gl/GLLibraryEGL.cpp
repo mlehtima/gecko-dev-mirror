@@ -147,8 +147,11 @@ static PRLibrary* LoadLibraryForEGLOnWindows(const nsAString& filename) {
 
 static std::shared_ptr<EglDisplay> GetAndInitDisplay(
     GLLibraryEGL& egl, void* displayType,
-    const StaticMutexAutoLock& aProofOfLock) {
-  const auto display = egl.fGetDisplay(displayType);
+    const StaticMutexAutoLock& aProofOfLock,
+    EGLDisplay display = EGL_NO_DISPLAY) {
+  if (display == EGL_NO_DISPLAY) {
+    display = egl.fGetDisplay(displayType);
+  }
   if (!display) return nullptr;
   return EglDisplay::Create(egl, display, false, aProofOfLock);
 }
@@ -350,11 +353,11 @@ Maybe<SymbolLoader> GLLibraryEGL::GetSymbolLoader() const {
 // -
 
 /* static */
-RefPtr<GLLibraryEGL> GLLibraryEGL::Get(nsACString* const out_failureId) {
+RefPtr<GLLibraryEGL> GLLibraryEGL::Get(nsACString* const out_failureId void* aDisplay) {
   StaticMutexAutoLock lock(sMutex);
   if (!sInstance) {
     sInstance = new GLLibraryEGL;
-    if (NS_WARN_IF(!sInstance->Init(out_failureId))) {
+    if (NS_WARN_IF(!sInstance->Init(false, out_failureId, aDisplay))) {
       sInstance = nullptr;
     }
   }
@@ -366,7 +369,7 @@ RefPtr<GLLibraryEGL> GLLibraryEGL::Get(nsACString* const out_failureId) {
   sInstance = nullptr;
 }
 
-bool GLLibraryEGL::Init(nsACString* const out_failureId) {
+bool GLLibraryEGL::Init(bool forceAccel, nsACString* const out_failureId, EGLDisplay aDisplay) {
   MOZ_RELEASE_ASSERT(!mSymbols.fTerminate);
 
   mozilla::ScopedGfxFeatureReporter reporter("EGL");
@@ -519,6 +522,11 @@ bool GLLibraryEGL::Init(nsACString* const out_failureId) {
   }
 
   // -
+  std::shared_ptr<EglDisplay> defaultDisplay = CreateDisplay(forceAccel, out_failureId, aDisplay);
+  if (!defaultDisplay) {
+    return false;
+  }
+  mDefaultDisplay = defaultDisplay;
 
   InitLibExtensions();
 
@@ -766,14 +774,15 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::DefaultDisplay(
 }
 
 std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplay(
-    const bool forceAccel, nsACString* const out_failureId) {
+    const bool forceAccel, nsACString* const out_failureId, EGLDisplay aDisplay) {
   StaticMutexAutoLock lock(sMutex);
-  return CreateDisplayLocked(forceAccel, out_failureId, lock);
+  return CreateDisplayLocked(forceAccel, out_failureId, lock, aDisplay);
 }
 
 std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplayLocked(
     const bool forceAccel, nsACString* const out_failureId,
-    const StaticMutexAutoLock& aProofOfLock) {
+    const StaticMutexAutoLock& aProofOfLock,
+    EGLDisplay aDisplay) {
   std::shared_ptr<EglDisplay> ret;
 
   if (IsExtensionSupported(EGLLibExtension::ANGLE_platform_angle_d3d)) {
@@ -837,7 +846,7 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplayLocked(
     }
 #endif
     if (!ret) {
-      ret = GetAndInitDisplay(*this, nativeDisplay, aProofOfLock);
+      ret = GetAndInitDisplay(*this, nativeDisplay, aProofOfLock, aDisplay);
     }
   }
 

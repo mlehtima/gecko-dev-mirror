@@ -43,6 +43,41 @@ class GL_CONTEXT_PROVIDER_NAME {
       mozilla::widget::CompositorWidget* aCompositorWidget,
       bool aHardwareWebRender, bool aForceAccelerated);
 
+  /**
+   * Create wrapping Gecko GLContext for external gl context.
+   *
+   * @param aContext External context which will be wrapped by Gecko GLContext.
+   * @param aSurface External surface which is used for external context.
+   *
+   * @return Wrapping Context to use for rendering
+   */
+  static already_AddRefed<GLContext> CreateWrappingExisting(void* aContext,
+                                                            void* aSurface,
+                                                            void* aDisplay);
+
+  /**
+   * Create a context for offscreen rendering.  The target of this
+   * context should be treated as opaque -- it might be a FBO, or a
+   * pbuffer, or some other construct.  Users of this GLContext
+   * should bind framebuffer 0 directly to use this offscreen buffer.
+   *
+   * The offscreen context returned by this method will always have
+   * the ability to be rendered into a context created by a window.
+   * It might or might not share resources with the global context;
+   * query GetSharedContext() for a non-null result to check.  If
+   * resource sharing can be avoided on the target platform, it will
+   * be, in order to isolate the offscreen context.
+   *
+   * @param size    The initial size of this offscreen context.
+   * @param flags   The set of CreateContextFlags to be used for this
+   *                offscreen context.
+   *
+   * @return Context to use for offscreen rendering
+   */
+  static already_AddRefed<GLContext> CreateOffscreen(
+      const mozilla::gfx::IntSize& size,
+      CreateContextFlags flags, nsACString* const out_failureId);
+
   /// Just create a context. We'll add offscreen stuff ourselves.
   static already_AddRefed<GLContext> CreateHeadless(
       const GLContextCreateDesc&, nsACString* const out_failureId);
