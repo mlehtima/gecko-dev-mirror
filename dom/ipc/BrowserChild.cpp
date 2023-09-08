@@ -342,7 +342,8 @@ BrowserChild::BrowserChild(ContentChild* aManager, const TabId& aTabId,
 #endif
       mPendingLayersObserverEpoch{0},
       mPendingDocShellBlockers(0),
-      mCancelContentJSEpoch(0) {
+      mCancelContentJSEpoch(0),
+      mWidgetNativeData(0) {
   mozilla::HoldJSObjects(this);
 
   // preloaded BrowserChild should not be added to child map
@@ -3287,6 +3288,12 @@ mozilla::ipc::IPCResult BrowserChild::RecvAllowScriptsToClose() {
   if (window) {
     nsGlobalWindowOuter::Cast(window)->AllowScriptsToClose();
   }
+  return IPC_OK();
+}
+
+mozilla::ipc::IPCResult BrowserChild::RecvSetWidgetNativeData(
+    const WindowsHandle& aWidgetNativeData) {
+  mWidgetNativeData = aWidgetNativeData;
   return IPC_OK();
 }
 

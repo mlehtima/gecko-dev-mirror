@@ -124,6 +124,9 @@ typedef void* nsNativeWidget;
 #define NS_NATIVE_SCREEN 9
 // The toplevel GtkWidget containing this nsIWidget:
 #define NS_NATIVE_SHELLWIDGET 10
+// Has to match to NPNVnetscapeWindow, and shareable across processes
+// HWND on Windows and XID on X11
+#define NS_NATIVE_SHAREABLE_WINDOW 11
 #define NS_NATIVE_OPENGL_CONTEXT 12
 // This is available only with GetNativeData() in parent process.  Anybody
 // shouldn't access this pointer as a valid pointer since the result may be
@@ -138,6 +141,8 @@ typedef void* nsNativeWidget;
 #  define NS_NATIVE_TSF_CATEGORY_MGR 101
 #  define NS_NATIVE_TSF_DISPLAY_ATTR_MGR 102
 #  define NS_NATIVE_ICOREWINDOW 103  // winrt specific
+#  define NS_NATIVE_CHILD_WINDOW 104
+#  define NS_NATIVE_CHILD_OF_SHAREABLE_WINDOW 105
 #endif
 #if defined(MOZ_WIDGET_GTK)
 #  define NS_NATIVE_EGL_WINDOW 106
