@@ -61,8 +61,6 @@ public:
 
     NS_IMETHOD GetEffectivePageSize(double* aWidth, double* aHeight) override;
 
-    NS_IMETHOD SetupSilentPrinting() override;
-
     NS_IMETHOD SetPageRanges(const nsTArray<int32_t>&) override;
     NS_IMETHOD GetPageRanges(nsTArray<int32_t>&) override;
 

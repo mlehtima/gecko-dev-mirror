@@ -119,8 +119,7 @@ already_AddRefed<PrintTarget> nsDeviceContextSpecQt::MakePrintTarget()
     return nullptr;
 }
 
-NS_IMETHODIMP nsDeviceContextSpecQt::Init(nsIWidget* aWidget,
-        nsIPrintSettings* aPS,
+NS_IMETHODIMP nsDeviceContextSpecQt::Init(nsIPrintSettings* aPS,
         bool aIsPrintPreview)
 {
     DO_PR_DEBUG_LOG(("nsDeviceContextSpecQt::Init(aPS=%p)\n", aPS));
@@ -129,8 +128,8 @@ NS_IMETHODIMP nsDeviceContextSpecQt::Init(nsIWidget* aWidget,
     mIsPPreview = aIsPrintPreview;
 
     // This is only set by embedders
-    bool toFile;
-    aPS->GetPrintToFile(&toFile);
+    bool toFile = (aPS->GetOutputDestination() ==
+                   nsIPrintSettings::kOutputDestinationFile);
 
     mToPrinter = !toFile && !aIsPrintPreview;
 

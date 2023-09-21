@@ -11,21 +11,19 @@
 
 class nsIPrintSettings;
 
-class nsPrintDialogServiceQt : public nsIPrintDialogService
+class nsPrintDialogServiceQt final : public nsIPrintDialogService
 {
 public:
     nsPrintDialogServiceQt();
 
     NS_DECL_ISUPPORTS
-
-    NS_IMETHODIMP Init() override;
-    NS_IMETHODIMP Show(nsPIDOMWindowOuter* aParent,
-                       nsIPrintSettings* aSettings) override;
-    NS_IMETHODIMP ShowPageSetup(nsPIDOMWindowOuter *aParent,
-                                nsIPrintSettings* aSettings) override;
+    NS_DECL_NSIPRINTDIALOGSERVICE
 
 protected:
     virtual ~nsPrintDialogServiceQt();
 };
+
+NS_DEFINE_STATIC_IID_ACCESSOR(nsPrintDialogServiceQt,
+                              NS_IPRINTDIALOGSERVICE_IID)
 
 #endif

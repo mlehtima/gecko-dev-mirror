@@ -378,11 +378,6 @@ nsPrintSettingsQt::GetEffectivePageSize(double* aWidth, double* aHeight)
     return NS_OK;
 }
 
-NS_IMETHODIMP
-nsPrintSettingsQt::SetupSilentPrinting() {
-    return NS_OK;
-}
-
 NS_IMETHODIMP nsPrintSettingsQt::GetResolution(int32_t* aResolution) {
     NS_ENSURE_ARG_POINTER(aResolution);
     *aResolution = mResolution;

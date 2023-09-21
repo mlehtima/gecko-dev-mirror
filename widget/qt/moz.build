@@ -10,12 +10,10 @@ SOURCES += [
     'nsAppShell.cpp',
     'nsBidiKeyboard.cpp',
     'nsLookAndFeel.cpp',
-    'nsNativeBasicThemeQt.cpp',
     'nsScreenManagerQt.cpp',
     'nsScreenQt.cpp',
     'nsUserIdleServiceQt.cpp',
     'nsWidgetFactory.cpp',
-    'ProcInfo.cpp',
 ]
 
 

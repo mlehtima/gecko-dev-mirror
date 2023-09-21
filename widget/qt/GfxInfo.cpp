@@ -171,36 +171,6 @@ GfxInfo::GetIsGPU2Active(bool* aIsGPU2Active)
   return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP
-GfxInfo::GetDisplayInfo(nsTArray<nsString>& aDisplayInfo) {
-  for (QScreen *screen : QGuiApplication::screens()) {
-    nsString value;
-    value.AppendPrintf("%dx%d@%dHz",
-                       screen->size().width(),
-                       screen->size().height(),
-                       qRound(screen->refreshRate()));
-
-    aDisplayInfo.AppendElement(value);
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-GfxInfo::GetDisplayWidth(nsTArray<uint32_t>& aDisplayWidth) {
-  for (QScreen *screen : QGuiApplication::screens()) {
-    aDisplayWidth.AppendElement((uint32_t)screen->size().width());
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-GfxInfo::GetDisplayHeight(nsTArray<uint32_t>& aDisplayHeight) {
-  for (QScreen *screen : QGuiApplication::screens()) {
-    aDisplayHeight.AppendElement((uint32_t)screen->size().height());
-  }
-  return NS_OK;
-}
-
 const nsTArray<GfxDriverInfo>&
 GfxInfo::GetGfxDriverInfo()
 {

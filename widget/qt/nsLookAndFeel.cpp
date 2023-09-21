@@ -121,45 +121,11 @@ nsLookAndFeel::NativeGetColor(ColorID aID, ColorScheme, nscolor &aResult)
         // These colors don't seem to be used for anything anymore in Mozilla
         // (except here at least TextSelectBackground and TextSelectForeground)
         // The CSS2 colors below are used.
-    case ColorID::WindowBackground:
-        aResult = QCOLOR_TO_NS_RGB(palette.color(QPalette::Normal, QPalette::Window));
-        break;
-    case ColorID::WindowForeground:
-        aResult = QCOLOR_TO_NS_RGB(palette.color(QPalette::Normal, QPalette::WindowText));
-        break;
-    case ColorID::WidgetBackground:
-        aResult = QCOLOR_TO_NS_RGB(palette.color(QPalette::Normal, QPalette::Window));
-        break;
-    case ColorID::WidgetForeground:
-        aResult = QCOLOR_TO_NS_RGB(palette.color(QPalette::Normal, QPalette::WindowText));
-        break;
-    case ColorID::WidgetSelectBackground:
-        aResult = QCOLOR_TO_NS_RGB(palette.color(QPalette::Normal, QPalette::Window));
-        break;
-    case ColorID::WidgetSelectForeground:
-        aResult = QCOLOR_TO_NS_RGB(palette.color(QPalette::Normal, QPalette::WindowText));
-        break;
-    case ColorID::Widget3DHighlight:
-        aResult = NS_RGB(0xa0,0xa0,0xa0);
-        break;
-    case ColorID::Widget3DShadow:
-        aResult = NS_RGB(0x40,0x40,0x40);
-        break;
-    case ColorID::TextBackground:
-        // not used?
-        aResult = QCOLOR_TO_NS_RGB(palette.color(QPalette::Normal, QPalette::Window));
-        break;
-    case ColorID::TextForeground:
-        // not used?
-        aResult = QCOLOR_TO_NS_RGB(palette.color(QPalette::Normal, QPalette::WindowText));
-        break;
-    case ColorID::TextSelectBackground:
     case ColorID::IMESelectedRawTextBackground:
     case ColorID::IMESelectedConvertedTextBackground:
         // still used
         aResult = QCOLOR_TO_NS_RGB(palette.color(QPalette::Normal, QPalette::Highlight));
         break;
-    case ColorID::TextSelectForeground:
     case ColorID::IMESelectedRawTextForeground:
     case ColorID::IMESelectedConvertedTextForeground:
         // still used
@@ -322,11 +288,9 @@ nsLookAndFeel::NativeGetColor(ColorID aID, ColorScheme, nscolor &aResult)
         aResult = FG_PRELIGHT_COLOR;
         break;
     case ColorID::MozCellhighlight:
-    case ColorID::MozHtmlCellhighlight:
         aResult = QCOLOR_TO_NS_RGB(palette.color(QPalette::Normal, QPalette::Highlight));
         break;
     case ColorID::MozCellhighlighttext:
-    case ColorID::MozHtmlCellhighlighttext:
         aResult = QCOLOR_TO_NS_RGB(palette.color(QPalette::Normal, QPalette::HighlightedText));
         break;
     case ColorID::MozMenuhover:
@@ -418,8 +382,6 @@ nsLookAndFeel::NativeGetInt(IntID aID, int32_t &aResult)
             break;
 
         case IntID::WindowsDefaultTheme:
-        case IntID::WindowsThemeIdentifier:
-        case IntID::OperatingSystemVersionIdentifier:
             aResult = 0;
             rv = NS_ERROR_NOT_IMPLEMENTED;
             break;

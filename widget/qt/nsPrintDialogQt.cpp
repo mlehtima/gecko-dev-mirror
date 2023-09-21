@@ -13,13 +13,9 @@
 
 NS_IMPL_ISUPPORTS(nsPrintDialogServiceQt, nsIPrintDialogService)
 
-nsPrintDialogServiceQt::nsPrintDialogServiceQt()
-{
-}
+nsPrintDialogServiceQt::nsPrintDialogServiceQt() = default;
 
-nsPrintDialogServiceQt::~nsPrintDialogServiceQt()
-{
-}
+nsPrintDialogServiceQt::~nsPrintDialogServiceQt() = default;
 
 NS_IMETHODIMP
 nsPrintDialogServiceQt::Init()
@@ -28,15 +24,16 @@ nsPrintDialogServiceQt::Init()
 }
 
 NS_IMETHODIMP
-nsPrintDialogServiceQt::Show(nsPIDOMWindowOuter *aParent,
-                             nsIPrintSettings* aSettings)
+nsPrintDialogServiceQt::ShowPrintDialog(mozIDOMWindowProxy* aParent,
+                                        bool aHaveSelection,
+                                        nsIPrintSettings* aSettings)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsPrintDialogServiceQt::ShowPageSetup(nsPIDOMWindowOuter* aParent,
-                                      nsIPrintSettings* aNSSettings)
+nsPrintDialogServiceQt::ShowPageSetupDialog(mozIDOMWindowProxy* aParent,
+                                            nsIPrintSettings* aNSSettings)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

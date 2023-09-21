@@ -72,3 +72,16 @@ nsScreenQt::GetColorDepth(int32_t *aColorDepth)
     // ###############
     return GetPixelDepth(aColorDepth);
 }
+
+NS_IMETHODIMP
+nsScreenQt::GetRefreshRate(int32_t* aRefreshRate) {
+  *aRefreshRate = QGuiApplication::screens()[mScreen]->refreshRate();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsScreenQt::GetIsPseudoDisplay(bool* aIsPseudoDisplay) {
+  //FIXME is this ok?
+  *aIsPseudoDisplay = false;
+  return NS_OK;
+}

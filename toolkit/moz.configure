@@ -2996,6 +2996,8 @@ with only_when(toolkit_qt):
     set_define("GLIB_VERSION_MIN_REQUIRED", "GLIB_VERSION_2_42")
     set_define("GLIB_VERSION_MAX_ALLOWED", "GLIB_VERSION_2_42")
 
+    set_define("CAIRO_HAS_QT_SURFACE", True)
+
 # Enable runtime logging
 # ==============================================================
 set_define("MOZ_LOGGING", True)
