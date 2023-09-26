@@ -51,13 +51,10 @@ def main(output):
     # SeaMonkey             https://searchfox.org/comm-central/rev/89f957706bbda77e5f34e64e117e7ce121bb5d83/suite/installer/package-manifest.in#307-309             # NOQA: E501
     assert buildconfig.substs["MOZ_BUILD_APP"] in (
         "browser",
-        "mobile/android",
+        "xulrunner",
         "comm/mail",
         "comm/suite",
-    ), (
-        "Cannot determine location of Remote Settings "
-        f"dumps for platform {buildconfig.substs['MOZ_BUILD_APP']}"
-    )
+    ) or buildconfig.substs["MOZ_BUILD_APP"].startswith('mobile/')
 
     dumps_locations = []
     if buildconfig.substs["MOZ_BUILD_APP"] == "browser":
