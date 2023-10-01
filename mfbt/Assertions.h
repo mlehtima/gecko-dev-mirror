@@ -635,10 +635,12 @@ struct AssertionConditionType {
  * required when included from C code.
  */
 #ifdef __cplusplus
-namespace mozilla::detail {
+namespace mozilla {
+namespace detail {
 MFBT_API MOZ_NORETURN MOZ_COLD void InvalidArrayIndex_CRASH(size_t aIndex,
                                                             size_t aLength);
-}  // namespace mozilla::detail
+}  // namespace detail
+}  // namespace mozilla
 #endif  // __cplusplus
 
 #endif /* mozilla_Assertions_h */
