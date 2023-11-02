@@ -913,6 +913,7 @@ class PresShell final : public nsStubDocumentObserver,
     return mObservesMutationsForPrint;
   }
 
+  void SetIsActive(bool aIsActive, bool aIsInActiveTab);
   void ActivenessMaybeChanged();
   // See ComputeActiveness() for details of these two booleans.
   bool IsActive() const { return mIsActive; }
@@ -1731,7 +1732,6 @@ class PresShell final : public nsStubDocumentObserver,
  private:
   ~PresShell();
 
-  void SetIsActive(bool aIsActive, bool aIsInActiveTab);
   struct Activeness {
     bool mShouldBeActive = false;
     bool mIsInActiveTab = false;
