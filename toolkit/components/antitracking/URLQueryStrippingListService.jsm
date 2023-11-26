@@ -222,6 +222,11 @@ class URLQueryStrippingListService {
         let prefValue = Services.prefs.getStringPref(data, "");
         this._onPrefUpdate(data, prefValue);
         break;
+      case "profile-after-change":
+        if (!!this.initialized) {
+          Cu.reportError(`Unexpected post-init event ${topic}`);
+        }
+        break;
       default:
         Cu.reportError(`Unexpected event ${topic}`);
     }
