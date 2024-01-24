@@ -6,10 +6,6 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
-  SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
-});
-
 function UpdateSessionStore(
   aBrowser,
   aBrowsingContext,
@@ -55,26 +51,7 @@ var SessionStoreFuncInternal = {
     aCollectSHistory,
     aData
   ) {
-    let { formdata, scroll } = aData;
-
-    if (formdata) {
-      aData.formdata = formdata.toJSON();
-    }
-
-    if (scroll) {
-      aData.scroll = scroll.toJSON();
-    }
-
-    SessionStore.updateSessionStoreFromTablistener(
-      aBrowser,
-      aBrowsingContext,
-      aPermanentKey,
-      {
-        data: aData,
-        epoch: aEpoch,
-        sHistoryNeeded: aCollectSHistory,
-      }
-    );
+    // Not implemented
   },
 
   updateSessionStoreForStorage: function SSF_updateSessionStoreForWindow(
@@ -84,11 +61,6 @@ var SessionStoreFuncInternal = {
     aEpoch,
     aData
   ) {
-    SessionStore.updateSessionStoreFromTablistener(
-      aBrowser,
-      aBrowsingContext,
-      aPermanentKey,
-      { data: { storage: aData }, epoch: aEpoch }
-    );
+      // Not implemented
   },
 };
