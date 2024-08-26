@@ -128,7 +128,7 @@ class GLLibraryEGL final {
   std::unordered_map<EGLDisplay, std::weak_ptr<EglDisplay>> mActiveDisplays;
 
  public:
-  static RefPtr<GLLibraryEGL> Get(nsACString* const out_failureId, void* aDisplay);
+  static RefPtr<GLLibraryEGL> Get(nsACString* const out_failureId, EGLDisplay aDisplay = EGL_NO_DISPLAY);
   bool Init(bool forceAccel, nsACString* const out_failureId, EGLDisplay aDisplay = EGL_NO_DISPLAY);
   static void Shutdown();
 
@@ -142,7 +142,8 @@ class GLLibraryEGL final {
 
   std::shared_ptr<EglDisplay> CreateDisplayLocked(
       bool forceAccel, nsACString* const out_failureId,
-      const StaticMutexAutoLock& aProofOfLock);
+      const StaticMutexAutoLock& aProofOfLock,
+      EGLDisplay aDisplay = EGL_NO_DISPLAY);
 
  public:
   Maybe<SymbolLoader> GetSymbolLoader() const;
@@ -151,7 +152,8 @@ class GLLibraryEGL final {
                                             nsACString* const out_failureId,
                                             EGLDisplay aDisplay = EGL_NO_DISPLAY);
   std::shared_ptr<EglDisplay> CreateDisplay(ID3D11Device*);
-  std::shared_ptr<EglDisplay> DefaultDisplay(nsACString* const out_failureId);
+  std::shared_ptr<EglDisplay> DefaultDisplay(nsACString* const out_failureId,
+                                             EGLDisplay aDisplay = EGL_NO_DISPLAY);
 
   bool IsExtensionSupported(EGLLibExtension aKnownExtension) const {
     return mAvailableExtensions[UnderlyingValue(aKnownExtension)];
@@ -613,7 +615,7 @@ class EglDisplay final {
  public:
   static std::shared_ptr<EglDisplay> Create(
       GLLibraryEGL&, EGLDisplay, bool isWarp,
-      const StaticMutexAutoLock& aProofOfLock);
+      bool init, const StaticMutexAutoLock& aProofOfLock);
 
   // Only `public` for make_shared.
   EglDisplay(const PrivateUseOnly&, GLLibraryEGL&, EGLDisplay, bool isWarp);

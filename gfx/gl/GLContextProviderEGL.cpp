@@ -83,6 +83,14 @@
 #  endif
 #endif
 
+#ifdef MOZ_WIDGET_QT
+#include <qpa/qplatformnativeinterface.h>
+#include <QGuiApplication>
+#include <dlfcn.h>
+
+#define IS_WAYLAND_DISPLAY() (true)
+#endif
+
 struct wl_egl_window;
 
 using namespace mozilla::gfx;
@@ -92,7 +100,7 @@ namespace gl {
 
 using namespace mozilla::widget;
 
-#if defined(MOZ_WAYLAND)
+#if defined(MOZ_WAYLAND) || defined(MOZ_WIDGET_QT)
 class SavedGLSurface {
  public:
   SavedGLSurface(struct wl_surface* aWaylandSurface,
@@ -140,6 +148,115 @@ static int next_power_of_two(int v) {
   return v;
 }
 
+// Use the main app's EGLDisplay to avoid creating multiple Wayland connections
+// See JB#56215
+static EGLDisplay GetAppDisplay() {
+#ifdef MOZ_WIDGET_QT
+  QPlatformNativeInterface* interface = QGuiApplication::platformNativeInterface();
+  MOZ_ASSERT(interface);
+  return (EGLDisplay)(interface->nativeResourceForIntegration(QByteArrayLiteral("egldisplay")));
+#else
+  return EGL_NO_DISPLAY;
+#endif
+}
+
+#ifdef MOZ_WIDGET_QT
+#define WL_COMPOSITOR_CREATE_SURFACE 0
+#define WL_SURFACE_DESTROY 0
+
+// Used for lifetime management of the dynamically loaded wayland libraries
+static bool waylandFunctionsLoaded = false;
+static void *waylandEglHandle = nullptr;
+static void *waylandClientHandle = nullptr;
+
+// See /usr/include/wayland-egl-core.h
+static struct wl_egl_window * (*_wl_egl_window_create)(struct wl_surface *surface, int width, int height) = nullptr;
+static void (*_wl_egl_window_destroy)(struct wl_egl_window *egl_window) = nullptr;
+
+// See /usr/include/wayland-client-protocol.h
+static const struct wl_interface *_wl_surface_interface = nullptr;
+
+// See wayland/src/wayland-client-core.h
+static struct wl_proxy * (*_wl_proxy_marshal_constructor)(struct wl_proxy *proxy, uint32_t opcode, const struct wl_interface *interface, ...) = nullptr;
+static void (*_wl_proxy_marshal)(struct wl_proxy *p, uint32_t opcode, ...) = nullptr;
+static void (*_wl_proxy_destroy)(struct wl_proxy *proxy) = nullptr;
+
+static inline struct wl_surface * _wl_compositor_create_surface(struct wl_compositor *wl_compositor)
+{
+  MOZ_ASSERT(_wl_proxy_marshal_constructor);
+  struct wl_proxy *id;
+  id = _wl_proxy_marshal_constructor((struct wl_proxy *) wl_compositor, WL_COMPOSITOR_CREATE_SURFACE, _wl_surface_interface, NULL);
+  return (struct wl_surface *) id;
+}
+
+static inline void _wl_surface_destroy(struct wl_surface *wl_surface)
+{
+  MOZ_ASSERT(_wl_proxy_marshal);
+  MOZ_ASSERT(_wl_proxy_destroy);
+  _wl_proxy_marshal((struct wl_proxy *) wl_surface, WL_SURFACE_DESTROY);
+  _wl_proxy_destroy((struct wl_proxy *) wl_surface);
+}
+
+static bool LoadWaylandFunctions() {
+  if (waylandFunctionsLoaded) {
+    // We load everything or nothing
+    return true;
+  }
+
+  // wl_egl_window_create
+  // wl_egl_window_destroy
+  // Library will be unloaded when GLContextEGL is destroyed and sSavedGLSurfaces is empty
+  waylandEglHandle = dlopen("libwayland-egl.so.1", RTLD_LAZY);
+  if (!waylandEglHandle) {
+    NS_WARNING("Error opening libwayland-egl.so.1");
+    return false;
+  }
+  *(void **)(&_wl_egl_window_create) = dlsym(waylandEglHandle, "wl_egl_window_create");
+  *(void **)(&_wl_egl_window_destroy) = dlsym(waylandEglHandle, "wl_egl_window_destroy");
+
+  if (!_wl_egl_window_create || !_wl_egl_window_destroy) {
+    NS_WARNING("Error loading functions from libwayland-egl.so.1");
+    dlclose(waylandEglHandle);
+    return false;
+  }
+
+  // wl_surface_interface
+  // wl_proxy_marshal_constructor
+  // wl_proxy_marshal, wl_proxy_destroy
+  // Library will be unloaded when GLContextEGL is destroyed and sSavedGLSurfaces is empty
+  waylandClientHandle = dlopen("libwayland-client.so.0", RTLD_LAZY);
+  if (!waylandClientHandle) {
+    NS_WARNING("Error opening libwayland-client.so.0");
+    dlclose(waylandEglHandle);
+    return false;
+  }
+  _wl_surface_interface = (const struct wl_interface *)dlsym(waylandClientHandle, "wl_surface_interface");
+
+  *(void **)(&_wl_proxy_marshal_constructor) = dlsym(waylandClientHandle, "wl_proxy_marshal_constructor");
+  *(void **)(&_wl_proxy_marshal) = dlsym(waylandClientHandle, "wl_proxy_marshal");
+  *(void **)(&_wl_proxy_destroy) = dlsym(waylandClientHandle, "wl_proxy_destroy");
+
+  if (!_wl_surface_interface || !_wl_proxy_marshal_constructor || !_wl_proxy_marshal || !_wl_proxy_destroy) {
+    _wl_proxy_marshal_constructor = nullptr;
+    NS_WARNING("Error loading functions from libwayland-egl.so.1");
+    dlclose(waylandEglHandle);
+    dlclose(waylandClientHandle);
+    return false;
+  }
+
+  waylandFunctionsLoaded = true;
+  return true;
+}
+
+static void UnloadWaylandFunctions() {
+  if (waylandFunctionsLoaded) {
+    dlclose(waylandEglHandle);
+    dlclose(waylandClientHandle);
+    waylandFunctionsLoaded = false;
+  }
+}
+#endif
+
 static bool is_power_of_two(int v) {
   NS_ASSERTION(v >= 0, "bad value");
 
@@ -153,7 +270,7 @@ static void DestroySurface(EglDisplay& egl, const EGLSurface oldSurface) {
     // TODO: This breaks TLS MakeCurrent caching.
     egl.fMakeCurrent(EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     egl.fDestroySurface(oldSurface);
-#if defined(MOZ_WAYLAND)
+#if defined(MOZ_WAYLAND) || defined(MOZ_WIDGET_QT)
     DeleteSavedGLSurface(oldSurface);
 #endif
   }
@@ -230,12 +347,12 @@ class GLContextEGLFactory {
 already_AddRefed<GLContext> GLContextEGLFactory::CreateImpl(
     EGLNativeWindowType aWindow, bool aHardwareWebRender, bool aUseGles) {
   nsCString failureId;
-  const auto lib = GLLibraryEGL::Get(&failureId);
+  const auto lib = GLLibraryEGL::Get(&failureId, GetAppDisplay());
   if (!lib) {
     gfxCriticalNote << "Failed[3] to load EGL library: " << failureId.get();
     return nullptr;
   }
-  const auto egl = lib->CreateDisplay(true, &failureId);
+  const auto egl = lib->CreateDisplay(true, &failureId, GetAppDisplay());
   if (!egl) {
     gfxCriticalNote << "Failed[3] to create EGL library  display: "
                     << failureId.get();
@@ -337,7 +454,7 @@ already_AddRefed<GLContext> GLContextEGLFactory::Create(
 EGLSurface GLContextEGL::CreateEGLSurfaceForCompositorWidget(
     widget::CompositorWidget* aCompositorWidget, const EGLConfig aConfig) {
   nsCString discardFailureId;
-  const auto egl = DefaultEglDisplay(&discardFailureId);
+  const auto egl = DefaultEglDisplay(&discardFailureId, GetAppDisplay());
   if (!egl) {
     gfxCriticalNote << "Failed to load EGL library 6!";
     return EGL_NO_SURFACE;
@@ -392,6 +509,13 @@ GLContextEGL::~GLContextEGL() {
 
   mozilla::gl::DestroySurface(*mEgl, mSurface);
   mozilla::gl::DestroySurface(*mEgl, mFallbackSurface);
+
+#if defined(MOZ_WIDGET_QT)
+  // If there are no active surfaces, close the wayload libraries
+  if (sSavedGLSurfaces.Count() == 0) {
+    UnloadWaylandFunctions();
+  }
+#endif
 }
 
 bool GLContextEGL::Init() {
@@ -800,6 +924,30 @@ TRY_AGAIN_POWER_OF_TWO:
   return surface;
 }
 
+#if defined(MOZ_WIDGET_QT)
+SavedGLSurface::SavedGLSurface(struct wl_surface* aWaylandSurface,
+                                   struct wl_egl_window* aEGLWindow)
+    : mWaylandSurface(aWaylandSurface), mEGLWindow(aEGLWindow) {
+  if (!LoadWaylandFunctions()) {
+    NS_WARNING("Failed to load dynamic Wayland functions");
+  }
+}
+
+SavedGLSurface::~SavedGLSurface() {
+  if (!LoadWaylandFunctions()) {
+    NS_WARNING("Failed to load dynamic Wayland functions");
+    return;
+  }
+
+  if (mEGLWindow) {
+    _wl_egl_window_destroy(mEGLWindow);
+  }
+  if (mWaylandSurface) {
+    _wl_surface_destroy(mWaylandSurface);
+  }
+}
+#endif
+
 #if defined(MOZ_WAYLAND)
 SavedGLSurface::SavedGLSurface(struct wl_surface* aWaylandSurface,
                                struct wl_egl_window* aEGLWindow)
@@ -832,6 +980,33 @@ EGLSurface GLContextEGL::CreateWaylandBufferSurface(
     sSavedGLSurfaces.LookupOrInsert(surface,
                                     new SavedGLSurface(wlsurface, eglwindow));
   }
+  return surface;
+}
+#endif
+
+#ifdef MOZ_WIDGET_QT
+EGLSurface CreateEmulatorBufferSurface(
+    EglDisplay& egl, EGLConfig config, mozilla::gfx::IntSize& pbsize) {
+  if (!LoadWaylandFunctions()) {
+    NS_WARNING("Failed to load dynamic wayland functions");
+    return nullptr;
+  }
+
+  QPlatformNativeInterface* interface = QGuiApplication::platformNativeInterface();
+  struct wl_compositor *compositor = (struct wl_compositor *)(interface->nativeResourceForIntegration(QByteArrayLiteral("compositor")));
+
+  struct wl_surface * wlsurface = _wl_compositor_create_surface(compositor);
+  struct wl_egl_window* eglwindow = _wl_egl_window_create(wlsurface, pbsize.width, pbsize.height);
+
+  EGLSurface surface = egl.fCreateWindowSurface(config, eglwindow, 0);
+
+  if (surface) {
+    SavedGLSurface* waylandData = new SavedGLSurface(wlsurface, eglwindow);
+    sSavedGLSurfaces.WithEntryHandle(surface, [&](auto&& entry) {
+      entry.OrInsert(waylandData);
+    });
+  }
+
   return surface;
 }
 #endif
@@ -988,15 +1163,12 @@ already_AddRefed<GLContext> GLContextProviderEGL::CreateWrappingExisting(
 
   nsCString failureId;
 
-  if (!gDefaultEglLibrary) {
-    gDefaultEglLibrary = GLLibraryEGL::Create(&failureId, aDisplay);
-
-    if (!gDefaultEglLibrary) {
-      gfxCriticalNote << "Failed[3] to load EGL library";
-      return nullptr;
-    }
+  const auto lib = gDefaultEglLibrary = GLLibraryEGL::Get(&failureId, aDisplay);
+  if (!lib) {
+    gfxCriticalNote << "Failed[3] to load EGL library: " << failureId.get();
+    return nullptr;
   }
-  const std::shared_ptr<EglDisplay> egl = gDefaultEglLibrary.operator->()->DefaultDisplay(&failureId);
+  const auto egl = lib->DefaultDisplay(&failureId, aDisplay);
 
   if (!egl) {
     gfxCriticalNote << "Failed[3] to create EGL library  display: "
@@ -1041,12 +1213,16 @@ EGLSurface GLContextEGL::CreateCompatibleSurface(void* aWindow) const {
   return surface;
 }
 
-static void FillContextAttribs(bool es3, bool useGles, nsTArray<EGLint>* out) {
+static void FillContextAttribs(bool es3, bool useGles, bool useWindow, nsTArray<EGLint>* out) {
   out->AppendElement(LOCAL_EGL_SURFACE_TYPE);
 #ifdef MOZ_WAYLAND
   if (GdkIsWaylandDisplay()) {
     // Wayland on desktop does not support PBuffer or FBO.
     // We create a dummy wl_egl_window instead.
+    out->AppendElement(LOCAL_EGL_WINDOW_BIT);
+  } else
+#else
+  if (useWindow) {
     out->AppendElement(LOCAL_EGL_WINDOW_BIT);
   } else
 #endif
@@ -1101,10 +1277,10 @@ static GLint GetAttrib(GLLibraryEGL* egl, EGLConfig config, EGLint attrib) {
 */
 
 static EGLConfig ChooseConfig(EglDisplay& egl, const GLContextCreateDesc& desc,
-                              const bool useGles) {
+                              const bool useGles, bool useWindow) {
   nsTArray<EGLint> configAttribList;
   FillContextAttribs(bool(desc.flags & CreateContextFlags::PREFER_ES3), useGles,
-                     &configAttribList);
+                     useWindow, &configAttribList);
 
   const EGLint* configAttribs = configAttribList.Elements();
 
@@ -1153,7 +1329,17 @@ RefPtr<GLContextEGL> GLContextEGL::CreateEGLPBufferOffscreenContextImpl(
     const std::shared_ptr<EglDisplay> egl, const GLContextCreateDesc& desc,
     const mozilla::gfx::IntSize& size, const bool useGles,
     nsACString* const out_failureId) {
-  const EGLConfig config = ChooseConfig(*egl, desc, useGles);
+  bool useWindow = false;
+  EGLConfig config = ChooseConfig(*egl, desc, useGles, useWindow);
+#if defined(MOZ_WIDGET_QT)
+  if (config == EGL_NO_CONFIG) {
+#ifdef DEBUG
+    printf_stderr("No pixel buffer config availabie, trying a window surface instead.\n");
+#endif
+    useWindow = true;
+    config = ChooseConfig(*egl, desc, useGles, useWindow);
+  }
+#endif
 
   if (config == EGL_NO_CONFIG) {
     *out_failureId = "FEATURE_FAILURE_EGL_NO_CONFIG"_ns;
@@ -1173,8 +1359,12 @@ RefPtr<GLContextEGL> GLContextEGL::CreateEGLPBufferOffscreenContextImpl(
   } else
 #endif
   {
-    surface = GLContextEGL::CreatePBufferSurfaceTryingPowerOfTwo(
-        *egl, config, LOCAL_EGL_NONE, pbSize);
+    if (useWindow) {
+      surface = CreateEmulatorBufferSurface(*egl, config, pbSize);
+    } else {
+      surface = GLContextEGL::CreatePBufferSurfaceTryingPowerOfTwo(
+          *egl, config, LOCAL_EGL_NONE, pbSize);
+    }
   }
 
   if (!surface) {
@@ -1190,7 +1380,7 @@ RefPtr<GLContextEGL> GLContextEGL::CreateEGLPBufferOffscreenContextImpl(
   if (!gl) {
     NS_WARNING("Failed to create GLContext from PBuffer");
     egl->fDestroySurface(surface);
-#if defined(MOZ_WAYLAND)
+#if defined(MOZ_WAYLAND) || defined(MOZ_WIDGET_QT)
     DeleteSavedGLSurface(surface);
 #endif
     return nullptr;
@@ -1240,7 +1430,7 @@ RefPtr<GLContextEGL> GLContextEGL::CreateEGLSurfacelessContext(
 /*static*/
 already_AddRefed<GLContext> GLContextProviderEGL::CreateHeadless(
     const GLContextCreateDesc& desc, nsACString* const out_failureId) {
-  const auto display = DefaultEglDisplay(out_failureId);
+  const auto display = DefaultEglDisplay(out_failureId, GetAppDisplay());
   if (!display) {
     return nullptr;
   }
@@ -1302,17 +1492,6 @@ already_AddRefed<GLContext> GLContextProviderEGL::CreateOffscreen(
 GLContext* GLContextProviderEGL::GetGlobalContext() { return nullptr; }
 
 // -
-
-RefPtr<GLLibraryEGL> DefaultEglLibrary(nsACString* const out_failureId) {
-  StaticMutexAutoLock lock(sMutex);
-  if (!gDefaultEglLibrary) {
-    gDefaultEglLibrary = GLLibraryEGL::Create(out_failureId, EGL_NO_DISPLAY);
-    if (!gDefaultEglLibrary) {
-      NS_WARNING("GLLibraryEGL::Create failed");
-    }
-  }
-  return gDefaultEglLibrary.get();
-}
 
 /*static*/ void GLContextProviderEGL::Shutdown() { GLLibraryEGL::Shutdown(); }
 

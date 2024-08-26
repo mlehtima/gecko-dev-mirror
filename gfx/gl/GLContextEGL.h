@@ -22,12 +22,13 @@ class CompositorWidget;
 namespace gl {
 
 inline std::shared_ptr<EglDisplay> DefaultEglDisplay(
-    nsACString* const out_failureId) {
-  const auto lib = GLLibraryEGL::Get(out_failureId);
+    nsACString* const out_failureId,
+    EGLDisplay aDisplay = EGL_NO_DISPLAY) {
+  const auto lib = GLLibraryEGL::Get(out_failureId, aDisplay);
   if (!lib) {
     return nullptr;
   }
-  return lib->DefaultDisplay(out_failureId);
+  return lib->DefaultDisplay(out_failureId, aDisplay);
 }
 
 // -
