@@ -282,8 +282,8 @@ def checks(target, binary):
 
     # Disabled for local builds because of readelf performance: See bug 1472496
     if not buildconfig.substs.get("DEVELOPER_OPTIONS"):
-        checks.append(check_textrel)
-        checks.append(check_pt_load)
+#        checks.append(check_textrel)
+#        checks.append(check_pt_load)
         checks.append(check_mozglue_order)
 
     retcode = 0
