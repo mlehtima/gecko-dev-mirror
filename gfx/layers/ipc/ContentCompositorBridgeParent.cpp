@@ -34,6 +34,11 @@
 #include "mozilla/BaseProfilerMarkerTypes.h"
 #include "GeckoProfiler.h"
 
+#if defined(MOZ_EMBEDLITE)
+#include "mozilla/embedlite/nsWindow.h"
+#include "mozilla/embedlite/EmbedLiteWebRenderBridgeParent.h"
+#endif
+
 namespace mozilla::layers {
 
 // defined in CompositorBridgeParent.cpp
@@ -185,9 +190,15 @@ ContentCompositorBridgeParent::AllocPWebRenderBridgeParent(
 
   api = api->Clone();
   RefPtr<AsyncImagePipelineManager> holder = root->AsyncImageManager();
+#ifdef MOZ_EMBEDLITE
+  WebRenderBridgeParent* parent = new mozilla::embedlite::EmbedLiteWebRenderBridgeParent(
+      this, aPipelineId, nullptr, root->CompositorScheduler(), std::move(api),
+      std::move(holder), cbp->GetVsyncInterval());
+#else
   WebRenderBridgeParent* parent = new WebRenderBridgeParent(
       this, aPipelineId, nullptr, root->CompositorScheduler(), std::move(api),
       std::move(holder), cbp->GetVsyncInterval());
+#endif
   parent->AddRef();  // IPDL reference
 
   {  // scope lock

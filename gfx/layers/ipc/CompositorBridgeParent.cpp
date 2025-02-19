@@ -93,6 +93,11 @@
 #  include "mozilla/gfx/DeviceManagerDx.h"
 #endif
 
+#if defined(MOZ_EMBEDLITE)
+#include "mozilla/embedlite/nsWindow.h"
+#include "mozilla/embedlite/EmbedLiteWebRenderBridgeParent.h"
+#endif
+
 namespace mozilla {
 
 namespace layers {
@@ -1320,9 +1325,15 @@ PWebRenderBridgeParent* CompositorBridgeParent::AllocPWebRenderBridgeParent(
   mAsyncImageManager =
       new AsyncImagePipelineManager(api->Clone(), useCompositorWnd);
   RefPtr<AsyncImagePipelineManager> asyncMgr = mAsyncImageManager;
+#ifdef MOZ_EMBEDLITE
+  mWrBridge = new mozilla::embedlite::EmbedLiteWebRenderBridgeParent(this, aPipelineId, mWidget, nullptr,
+                                        std::move(api), std::move(asyncMgr),
+                                        mVsyncRate);
+#else
   mWrBridge = new WebRenderBridgeParent(this, aPipelineId, mWidget, nullptr,
                                         std::move(api), std::move(asyncMgr),
                                         mVsyncRate);
+#endif
   mWrBridge.get()->AddRef();  // IPDL reference
 
   mCompositorScheduler = mWrBridge->CompositorScheduler();

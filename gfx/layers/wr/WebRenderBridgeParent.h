@@ -61,7 +61,7 @@ struct CompositorAnimationIdsForEpoch {
   nsTArray<uint64_t> mIds;
 };
 
-class WebRenderBridgeParent final : public PWebRenderBridgeParent,
+class WebRenderBridgeParent : public PWebRenderBridgeParent,
                                     public CompositorVsyncSchedulerOwner,
                                     public CompositableParentManager,
                                     public FrameRecorder {
@@ -322,11 +322,11 @@ class WebRenderBridgeParent final : public PWebRenderBridgeParent,
 
   RefPtr<WebRenderBridgeParentRef> GetWebRenderBridgeParentRef();
 
+  virtual ~WebRenderBridgeParent();
  private:
   class ScheduleSharedSurfaceRelease;
 
   WebRenderBridgeParent(const wr::PipelineId& aPipelineId, nsCString&& aError);
-  virtual ~WebRenderBridgeParent();
 
   bool ProcessEmptyTransactionUpdates(TransactionData& aData,
                                       bool* aScheduleComposite);
